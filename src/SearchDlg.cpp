@@ -109,30 +109,30 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_Date1({0})
     , m_Date2({0})
     , m_bDateLimitC(false)
-    , m_regUseRegex(_T("Software\\grepWin\\UseRegex"), 1)
-    , m_regAllSize(_T("Software\\grepWin\\AllSize"))
-    , m_regSize(_T("Software\\grepWin\\Size"), L"2000")
-    , m_regSizeCombo(_T("Software\\grepWin\\SizeCombo"), 0)
-    , m_regIncludeSystem(_T("Software\\grepWin\\IncludeSystem"))
-    , m_regIncludeHidden(_T("Software\\grepWin\\IncludeHidden"))
-    , m_regIncludeSubfolders(_T("Software\\grepWin\\IncludeSubfolders"), 1)
-    , m_regIncludeBinary(_T("Software\\grepWin\\IncludeBinary"), 1)
-    , m_regCreateBackup(_T("Software\\grepWin\\CreateBackup"))
-    , m_regUTF8(_T("Software\\grepWin\\UTF8"))
-    , m_regCaseSensitive(_T("Software\\grepWin\\CaseSensitive"))
-    , m_regDotMatchesNewline(_T("Software\\grepWin\\DotMatchesNewline"))
-    , m_regUseRegexForPaths(_T("Software\\grepWin\\UseFileMatchRegex"))
-    , m_regPattern(_T("Software\\grepWin\\pattern"))
-    , m_regExcludeDirsPattern(_T("Software\\grepWin\\ExcludeDirsPattern"))
-    , m_regSearchPath(_T("Software\\grepWin\\searchpath"))
-    , m_regEditorCmd(_T("Software\\grepWin\\editorcmd"))
-    , m_regBackupInFolder(L"Software\\grepWin\\backupinfolder", FALSE)
-    , m_regDateLimit(L"Software\\grepWin\\DateLimit", 0)
-    , m_regDate1Low(L"Software\\grepWin\\Date1Low", 0)
-    , m_regDate1High(L"Software\\grepWin\\Date1High", 0)
-    , m_regDate2Low(L"Software\\grepWin\\Date2Low", 0)
-    , m_regDate2High(L"Software\\grepWin\\Date2High", 0)
-    , m_regShowContent(L"Software\\grepWin\\ShowContent", 0)
+    , m_regUseRegex(_T("Software\\grepWinNP3\\UseRegex"), 1)
+    , m_regAllSize(_T("Software\\grepWinNP3\\AllSize"))
+    , m_regSize(_T("Software\\grepWinNP3\\Size"), L"2000")
+    , m_regSizeCombo(_T("Software\\grepWinNP3\\SizeCombo"), 0)
+    , m_regIncludeSystem(_T("Software\\grepWinNP3\\IncludeSystem"))
+    , m_regIncludeHidden(_T("Software\\grepWinNP3\\IncludeHidden"))
+    , m_regIncludeSubfolders(_T("Software\\grepWinNP3\\IncludeSubfolders"), 1)
+    , m_regIncludeBinary(_T("Software\\grepWinNP3\\IncludeBinary"), 1)
+    , m_regCreateBackup(_T("Software\\grepWinNP3\\CreateBackup"))
+    , m_regUTF8(_T("Software\\grepWinNP3\\UTF8"))
+    , m_regCaseSensitive(_T("Software\\grepWinNP3\\CaseSensitive"))
+    , m_regDotMatchesNewline(_T("Software\\grepWinNP3\\DotMatchesNewline"))
+    , m_regUseRegexForPaths(_T("Software\\grepWinNP3\\UseFileMatchRegex"))
+    , m_regPattern(_T("Software\\grepWinNP3\\pattern"))
+    , m_regExcludeDirsPattern(_T("Software\\grepWinNP3\\ExcludeDirsPattern"))
+    , m_regSearchPath(_T("Software\\grepWinNP3\\searchpath"))
+    , m_regEditorCmd(_T("Software\\grepWinNP3\\editorcmd"))
+    , m_regBackupInFolder(L"Software\\grepWinNP3\\backupinfolder", FALSE)
+    , m_regDateLimit(L"Software\\grepWinNP3\\DateLimit", 0)
+    , m_regDate1Low(L"Software\\grepWinNP3\\Date1Low", 0)
+    , m_regDate1High(L"Software\\grepWinNP3\\Date1High", 0)
+    , m_regDate2Low(L"Software\\grepWinNP3\\Date2Low", 0)
+    , m_regDate2High(L"Software\\grepWinNP3\\Date2High", 0)
+    , m_regShowContent(L"Software\\grepWinNP3\\ShowContent", 0)
     , m_AutoCompleteFilePatterns(bPortable ? &g_iniFile : NULL)
     , m_AutoCompleteExcludeDirsPatterns(bPortable ? &g_iniFile : NULL)
     , m_AutoCompleteSearchPatterns(bPortable ? &g_iniFile : NULL)
@@ -238,15 +238,15 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_pDropTarget->AddSuportedFormat(ftetc);
             SHAutoComplete(GetDlgItem(*this, IDC_SEARCHPATH), SHACF_FILESYSTEM|SHACF_AUTOSUGGEST_FORCE_ON);
 
-            m_AutoCompleteFilePatterns.Load(_T("Software\\grepWin\\History"), _T("FilePattern"));
+            m_AutoCompleteFilePatterns.Load(_T("Software\\grepWinNP3\\History"), _T("FilePattern"));
             m_AutoCompleteFilePatterns.Init(GetDlgItem(hwndDlg, IDC_PATTERN));
-            m_AutoCompleteExcludeDirsPatterns.Load(_T("Software\\grepWin\\History"), _T("ExcludeDirsPattern"));
+            m_AutoCompleteExcludeDirsPatterns.Load(_T("Software\\grepWinNP3\\History"), _T("ExcludeDirsPattern"));
             m_AutoCompleteExcludeDirsPatterns.Init(GetDlgItem(hwndDlg, IDC_EXCLUDEDIRSPATTERN));
-            m_AutoCompleteSearchPatterns.Load(_T("Software\\grepWin\\History"), _T("SearchPattern"));
+            m_AutoCompleteSearchPatterns.Load(_T("Software\\grepWinNP3\\History"), _T("SearchPattern"));
             m_AutoCompleteSearchPatterns.Init(GetDlgItem(hwndDlg, IDC_SEARCHTEXT));
-            m_AutoCompleteReplacePatterns.Load(_T("Software\\grepWin\\History"), _T("ReplacePattern"));
+            m_AutoCompleteReplacePatterns.Load(_T("Software\\grepWinNP3\\History"), _T("ReplacePattern"));
             m_AutoCompleteReplacePatterns.Init(GetDlgItem(hwndDlg, IDC_REPLACETEXT));
-            m_AutoCompleteSearchPaths.Load(_T("Software\\grepWin\\History"), _T("SearchPaths"));
+            m_AutoCompleteSearchPaths.Load(_T("Software\\grepWinNP3\\History"), _T("SearchPaths"));
             m_AutoCompleteSearchPaths.Init(GetDlgItem(hwndDlg, IDC_SEARCHPATH));
 
             m_editFilePatterns.Subclass(hwndDlg, IDC_PATTERN);
@@ -464,7 +464,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             }
             else
             {
-                if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWin"), _T("windowpos"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
+                if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowpos"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
                     SetWindowPlacement(*this, &wpl);
                 else
                     ShowWindow(*this, SW_SHOW);
@@ -486,7 +486,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         return FALSE;
     case WM_CLOSE:
         {
-            if (!DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)))
+            if (!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)))
             {
                 if (m_dwThreadRunning)
                     InterlockedExchange(&m_Cancelled, TRUE);
@@ -781,7 +781,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     auto msgtext = CStringUtils::Format((LPCWSTR)TranslatedString(hResource, IDS_REPLACECONFIRM).c_str(),
                                                         m_searchString.c_str(),
                                                         m_replaceString.empty() ? (LPCWSTR)TranslatedString(hResource, IDS_ANEMPTYSTRING).c_str() : m_replaceString.c_str());
-                    if (::MessageBox(*this, msgtext.c_str(), _T("grepWin"), MB_ICONQUESTION | MB_YESNO) != IDYES)
+                    if (::MessageBox(*this, msgtext.c_str(), _T("grepWinNP3"), MB_ICONQUESTION | MB_YESNO) != IDYES)
                     {
                         break;
                     }
@@ -818,7 +818,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         break;
     case IDCANCEL:
         {
-            if (DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)))
+            if (DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)))
             {
                 if (m_dwThreadRunning)
                     InterlockedExchange(&m_Cancelled, TRUE);
@@ -920,11 +920,11 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 DialogEnableWindow(IDC_FILEPATTERNREGEX, bIsDir);
                 DialogEnableWindow(IDC_FILEPATTERNTEXT, bIsDir);
 
-                // change the dialog title to "grepWin : search/path"
+                // change the dialog title to "grepWinNP3 : search/path"
                 TCHAR compactPath[100] = {0};
                 PathCompactPathEx(compactPath, buf.get(), 40, 0);
                 TCHAR titleBuf[MAX_PATH] = {0};
-                _stprintf_s(titleBuf, _countof(titleBuf), _T("grepWin : %s"), compactPath);
+                _stprintf_s(titleBuf, _countof(titleBuf), _T("grepWinNP3 : %s"), compactPath);
                 SetWindowText(*this, titleBuf);
             }
         }
@@ -1163,7 +1163,7 @@ void CSearchDlg::SaveWndPosition()
     }
     else
     {
-        SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWin"), _T("windowpos"), REG_NONE, &wpl, sizeof(wpl));
+        SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowpos"), REG_NONE, &wpl, sizeof(wpl));
     }
 }
 
@@ -1789,7 +1789,7 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
     if (dotPos != std::wstring::npos)
         ext = inf.filepath.substr(dotPos);
 
-    CRegStdString regEditorCmd(L"Software\\grepWin\\editorcmd");
+    CRegStdString regEditorCmd(L"Software\\grepWinNP3\\editorcmd");
     std::wstring cmd = regEditorCmd;
     if (bPortable)
         cmd = g_iniFile.GetValue(L"global", L"editorcmd", L"");

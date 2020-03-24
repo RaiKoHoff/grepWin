@@ -45,7 +45,7 @@ void CBookmarks::Load()
     {
         SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path.get());
         m_iniPath = path.get();
-        m_iniPath += _T("\\grepWin");
+        m_iniPath += _T("\\grepWinNP3");
     }
     CreateDirectory(m_iniPath.c_str(), NULL);
     m_iniPath += _T("\\bookmarks");
@@ -66,13 +66,14 @@ void CBookmarks::Save()
     {
         SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, path.get());
         m_iniPath = path.get();
-        m_iniPath += _T("\\grepWin");
+        m_iniPath += _T("\\grepWinNP3");
     }
     CreateDirectory(m_iniPath.c_str(), NULL);
     m_iniPath += _T("\\bookmarks");
     FILE * pFile = NULL;
     _tfopen_s(&pFile, m_iniPath.c_str(), _T("wb"));
-    SaveFile(pFile);
+
+    SaveFile(pFile, true);
     fclose(pFile);
 }
 

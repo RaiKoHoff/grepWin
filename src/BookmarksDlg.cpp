@@ -68,7 +68,7 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 
             WINDOWPLACEMENT wpl = { 0 };
             DWORD size = sizeof(wpl);
-            if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWin"), _T("windowposBookmarks"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
+            if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowposBookmarks"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
                 SetWindowPlacement(*this, &wpl);
             else
                 ShowWindow(*this, SW_SHOW);
@@ -152,7 +152,7 @@ LRESULT CBookmarksDlg::DoCommand(int id, int /*msg*/)
             WINDOWPLACEMENT wpl = { 0 };
             wpl.length = sizeof(WINDOWPLACEMENT);
             GetWindowPlacement(*this, &wpl);
-            SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWin"), _T("windowposBookmarks"), REG_NONE, &wpl, sizeof(wpl));
+            SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowposBookmarks"), REG_NONE, &wpl, sizeof(wpl));
             if ((id == IDOK) && (ListView_GetNextItem(GetDlgItem(*this, IDC_BOOKMARKS), -1, LVNI_SELECTED) >= 0))
                 SendMessage(m_hParent, WM_BOOKMARK, 0, 0);
             ShowWindow(*this, SW_HIDE);

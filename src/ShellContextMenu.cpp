@@ -206,7 +206,7 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
         m_Menu = CreatePopupMenu();
     }
 
-    CRegStdString regEditorCmd(L"Software\\grepWin\\editorcmd");
+    CRegStdString regEditorCmd(L"Software\\grepWinNP3\\editorcmd");
     std::wstring editorcmd = regEditorCmd;
     if (bPortable)
         editorcmd = g_iniFile.GetValue(L"global", L"editorcmd", L"");
