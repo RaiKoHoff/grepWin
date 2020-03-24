@@ -52,9 +52,8 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
             wchar_t modulepath[MAX_PATH] = {0};
             GetModuleFileName(NULL, modulepath, MAX_PATH);
+            PathRemoveFileSpec(modulepath);
             std::wstring path = modulepath;
-            path = path.substr(0, path.find_last_of('\\'));
-            CDirFileEnum fileEnumerator(path.c_str());
             bool bRecurse = false;
             bool bIsDirectory = false;
             std::wstring sPath;
@@ -64,19 +63,29 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             if (bPortable)
             {
                 const std::wstring& languagefile = g_iniFile.GetValue(L"global", L"languagefile", L"");
+
                 if (PathIsRelative(languagefile.c_str()))
                 {
-                    PathRemoveFileSpec(modulepath);
                     PathAppend(modulepath, languagefile.c_str());
                     setLang = modulepath;
                 }
                 else
                     setLang = languagefile;
+
+                // need to adapt file enumerator path
+                if (!languagefile.empty())
+                {
+                    lstrcpyn(modulepath, setLang.c_str(), MAX_PATH);
+                    PathRemoveFileSpec(modulepath);
+                }
+                path = modulepath;
             }
 
             int index = 1;
             int langIndex = 0;
-            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"[en-US] English (United States)");
+            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"English (United States) [en-US]");
+
+            CDirFileEnum fileEnumerator(path.c_str());
             while (fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse))
             {
                 size_t dotpos = sPath.find_last_of('.');

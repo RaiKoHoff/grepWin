@@ -182,15 +182,22 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
     std::wstring iniPath = CPathUtils::GetModuleDir(0);
     iniPath += L"\\grepwin.ini";
+
     if (parser.HasVal(L"inipath"))
         iniPath = parser.GetVal(L"inipath");
 
     if (bPortable)
     {
+        if (PathIsRelative(iniPath.c_str()))
+        {
+            WCHAR absPath[MAX_PATH] = {L'\0'};
+            lstrcpynW(absPath, CPathUtils::GetModuleDir(0).c_str(), MAX_PATH);
+            PathAppend(absPath, iniPath.c_str());
+            iniPath = absPath;
+        }
         g_iniFile.SetUnicode();
         g_iniFile.LoadFile(iniPath.c_str());
     }
-
 
     if (hWnd)
     {
@@ -335,6 +342,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
             ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, NULL, IDR_SEARCHDLG);
         }
+
         if (bPortable)
         {
             FILE * pFile = NULL;
