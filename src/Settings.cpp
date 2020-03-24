@@ -76,7 +76,7 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
             int index = 1;
             int langIndex = 0;
-            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"English");
+            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"[en-US] English (United States)");
             while (fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse))
             {
                 size_t dotpos = sPath.find_last_of('.');
