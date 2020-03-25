@@ -322,6 +322,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 m_Date2.dwHighDateTime = bPortable ? wcstoul(g_iniFile.GetValue(L"global", L"Date2High", L"0"), nullptr, 10) : DWORD(m_regDate2High);
             }
 
+            m_bUseRegex = (bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"UseRegex", L"0")) : DWORD(m_regUseRegex)) ? true : false;
+
             SendDlgItemMessage(hwndDlg, IDC_SIZECOMBO, CB_SETCURSEL, m_sizeCmp, 0);
 
             SendDlgItemMessage(hwndDlg, IDC_INCLUDESUBFOLDERS, BM_SETCHECK, m_bIncludeSubfolders ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -333,12 +335,12 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             SendDlgItemMessage(hwndDlg, IDC_CASE_SENSITIVE, BM_SETCHECK, m_bCaseSensitive ? BST_CHECKED : BST_UNCHECKED, 0);
             SendDlgItemMessage(hwndDlg, IDC_DOTMATCHNEWLINE, BM_SETCHECK, m_bDotMatchesNewline ? BST_CHECKED : BST_UNCHECKED, 0);
 
-            CheckRadioButton(hwndDlg, IDC_REGEXRADIO, IDC_TEXTRADIO, (bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"UseRegex", L"0")) : DWORD(m_regUseRegex)) ? IDC_REGEXRADIO : IDC_TEXTRADIO);
+            CheckRadioButton(hwndDlg, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
             CheckRadioButton(hwndDlg, IDC_ALLSIZERADIO, IDC_SIZERADIO, m_bAllSize ? IDC_ALLSIZERADIO : IDC_SIZERADIO);
             CheckRadioButton(hwndDlg, IDC_FILEPATTERNREGEX, IDC_FILEPATTERNTEXT, m_bUseRegexForPaths ? IDC_FILEPATTERNREGEX : IDC_FILEPATTERNTEXT);
 
-            if (!m_searchString.empty())
-                CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
+            //if (!m_searchString.empty())
+            //    CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
 
             DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
             DialogEnableWindow(IDC_ADDTOBOOKMARKS, FALSE);
@@ -682,7 +684,6 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_searchString = m_pBookmarksDlg->GetSelectedSearchString();
             m_replaceString = m_pBookmarksDlg->GetSelectedReplaceString();
             m_bUseRegex = m_pBookmarksDlg->GetSelectedUseRegex();
-
             m_bCaseSensitive = m_pBookmarksDlg->GetSelectedSearchCase();
             m_bDotMatchesNewline = m_pBookmarksDlg->GetSelectedDotMatchNewline();
             m_bCreateBackup = m_pBookmarksDlg->GetSelectedBackup();
@@ -981,9 +982,15 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
     case IDC_TEXTRADIO:
         {
             CheckRegex();
-            DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
+            DialogEnableWindow(IDC_TESTREGEX, m_bUseRegex);
         }
         break;
+    case IDC_FILEPATTERNTEXT:
+    case IDC_FILEPATTERNREGEX:
+        {
+            m_bUseRegexForPaths = (IsDlgButtonChecked(*this, IDC_FILEPATTERNREGEX) == BST_CHECKED);
+        }
+    break;
     case IDC_ADDTOBOOKMARKS:
         {
             auto buf = GetDlgItemText(IDC_SEARCHTEXT);
@@ -994,7 +1001,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
             m_excludedirspatternregex = buf.get();
             buf = GetDlgItemText(IDC_PATTERN);
             m_patternregex = buf.get();
-            bool bUseRegex = (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED);
 
             CNameDlg nameDlg(*this);
             if (nameDlg.DoModal(hResource, IDD_NAME, *this) == IDOK)
@@ -1005,7 +1011,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 bk.Name = nameDlg.GetName();
                 bk.Search = m_searchString;
                 bk.Replace = m_replaceString;
-                bk.UseRegex = bUseRegex;
+                bk.UseRegex = m_bUseRegex;
                 bk.CaseSensitive = (IsDlgButtonChecked(*this, IDC_CASE_SENSITIVE) == BST_CHECKED);
                 bk.DotMatchesNewline = (IsDlgButtonChecked(*this, IDC_DOTMATCHNEWLINE) == BST_CHECKED);
                 bk.Backup = (IsDlgButtonChecked(*this, IDC_CREATEBACKUP) == BST_CHECKED);
@@ -1822,6 +1828,12 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
 
         SearchReplace(cmd, L"%path%", inf.filepath.c_str());
 
+        // Notepad3 special
+        SearchReplace(cmd, L"%mode%", m_bUseRegex ? L"mr" : L"m");
+        std::wstring searchfor = m_searchString;
+        SearchReplace(searchfor, _T("\""), _T("\\\""));
+        SearchReplace(cmd, L"%pattern%", searchfor.c_str());
+
         STARTUPINFO startupInfo;
         PROCESS_INFORMATION processInfo;
         SecureZeroMemory(&startupInfo, sizeof(startupInfo));
@@ -2025,10 +2037,11 @@ bool CSearchDlg::SaveSettings()
     if (m_searchpath.empty())
         return false;
     if (bPortable)
+        g_iniFile.SetValue(L"global", L"searchfor", m_searchString.c_str());
+    if (bPortable)
         g_iniFile.SetValue(L"global", L"searchpath", m_searchpath.c_str());
     else
         m_regSearchPath = m_searchpath;
-    m_bUseRegex = (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED);
     if (bPortable)
         g_iniFile.SetValue(L"global", L"UseRegex", m_bUseRegex ? L"1" : L"0");
     else
@@ -2041,7 +2054,6 @@ bool CSearchDlg::SaveSettings()
             return false;
         }
     }
-    m_bUseRegexForPaths = (IsDlgButtonChecked(*this, IDC_FILEPATTERNREGEX) == BST_CHECKED);
     if (bPortable)
         g_iniFile.SetValue(L"global", L"UseFileMatchRegex", m_bUseRegexForPaths ? L"1" : L"0");
     else
@@ -2110,6 +2122,8 @@ bool CSearchDlg::SaveSettings()
 
     if (bPortable)
     {
+        g_iniFile.SetValue(L"global", L"searchfor", m_searchString.c_str());
+        g_iniFile.SetValue(L"global", L"searchpath", m_searchpath.c_str());
         g_iniFile.SetValue(L"global", L"IncludeSystem", m_bIncludeSystem ? L"1" : L"0");
         g_iniFile.SetValue(L"global", L"IncludeHidden", m_bIncludeHidden ? L"1" : L"0");
         g_iniFile.SetValue(L"global", L"IncludeSubfolders", m_bIncludeSubfolders ? L"1" : L"0");
@@ -3010,6 +3024,8 @@ int CSearchDlg::CheckRegex()
     int len = (int)_tcslen(buf.get());
     if (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED)
     {
+        m_bUseRegex = true;
+
         // check if the regex is valid
         bool bValid = true;
         if (len)
@@ -3055,12 +3071,12 @@ int CSearchDlg::CheckRegex()
     }
     else
     {
+        m_bUseRegex = false;
         SetDlgItemText(*this, IDC_REGEXOKLABEL, _T(""));
         DialogEnableWindow(IDOK, true);
         DialogEnableWindow(IDC_REPLACE, len>0);
         DialogEnableWindow(IDC_CREATEBACKUP, len>0);
     }
-
     return len;
 }
 

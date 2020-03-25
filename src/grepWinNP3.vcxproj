@@ -82,16 +82,16 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>$(ProjectName)_portable</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <TargetName>$(ProjectName)_portable</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>$(ProjectName)_portable</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <TargetName>$(ProjectName)_portable</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -263,6 +263,7 @@
     <ClInclude Include="..\sktoolslib_mod\RegHistory.h" />
     <ClInclude Include="..\sktoolslib_mod\Registry.h" />
     <ClInclude Include="..\sktoolslib_mod\ResString.h" />
+    <ClInclude Include="..\sktoolslib_mod\SimpleIni.h" />
     <ClInclude Include="..\sktoolslib_mod\StringUtils.h" />
     <ClInclude Include="..\sktoolslib_mod\SysImageList.h" />
     <ClInclude Include="..\sktoolslib_mod\SysInfo.h" />

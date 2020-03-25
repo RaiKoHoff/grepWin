@@ -241,17 +241,17 @@ void CBookmarksDlg::InitBookmarks()
     m_bookmarks.Load();
     CSimpleIni::TNamesDepend sections;
     m_bookmarks.GetAllSections(sections);
-    for (CSimpleIni::TNamesDepend::iterator it = sections.begin(); it != sections.end(); ++it)
+    for (const auto & section : sections)
     {
-        std::wstring searchString = m_bookmarks.GetValue(*it, _T("searchString"), _T(""));
-        std::wstring replaceString = m_bookmarks.GetValue(*it, _T("replaceString"), _T(""));
+        std::wstring searchString = m_bookmarks.GetValue(section.pItem, _T("searchString"), _T(""));
+        std::wstring replaceString = m_bookmarks.GetValue(section.pItem, _T("replaceString"), _T(""));
         RemoveQuotes(searchString);
         RemoveQuotes(replaceString);
 
         LVITEM lv = {0};
         lv.mask = LVIF_TEXT;
-        TCHAR * pBuf = new TCHAR[_tcslen(*it)+1];
-        _tcscpy_s(pBuf, _tcslen(*it)+1, *it);
+        TCHAR* pBuf = new TCHAR[_tcslen(section.pItem) + 1];
+        _tcscpy_s(pBuf, _tcslen(section.pItem) + 1, section.pItem);
         lv.pszText = pBuf;
         lv.iItem = ListView_GetItemCount(hListControl);
         int ret = ListView_InsertItem(hListControl, &lv);

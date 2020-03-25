@@ -26,6 +26,8 @@
 CBookmarks::CBookmarks(void)
 {
     SetUnicode(true);
+    SetMultiLine(true);
+    SetSpaces(false);
 }
 
 CBookmarks::~CBookmarks(void)
@@ -50,6 +52,8 @@ void CBookmarks::Load()
     CreateDirectory(m_iniPath.c_str(), NULL);
     m_iniPath += _T("\\bookmarks");
     SetUnicode();
+    SetMultiLine();
+    SetSpaces(false);
     LoadFile(m_iniPath.c_str());
 }
 
@@ -70,11 +74,8 @@ void CBookmarks::Save()
     }
     CreateDirectory(m_iniPath.c_str(), NULL);
     m_iniPath += _T("\\bookmarks");
-    FILE * pFile = NULL;
-    _tfopen_s(&pFile, m_iniPath.c_str(), _T("wb"));
 
-    SaveFile(pFile, true);
-    fclose(pFile);
+    SaveFile(m_iniPath.c_str(), true);
 }
 
 void CBookmarks::AddBookmark(const Bookmark& bm)

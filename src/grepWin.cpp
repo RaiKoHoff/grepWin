@@ -178,7 +178,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     } while ((hWnd == NULL) && alreadyRunning && timeout);
 
     auto modulename = CPathUtils::GetFileName(CPathUtils::GetModulePath(0));
-    bPortable = ((_tcsstr(modulename.c_str(), _T("portable"))) || (parser.HasKey(_T("portable"))));
+    bPortable       = ((_tcsstr(modulename.c_str(), _T("portable"))) || 
+                       (_tcsstr(modulename.c_str(), _T("NP3"))) || 
+                       (parser.HasKey(_T("portable"))));
 
     std::wstring iniPath = CPathUtils::GetModuleDir(0);
     iniPath += L"\\grepwin.ini";
@@ -196,6 +198,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
             iniPath = absPath;
         }
         g_iniFile.SetUnicode();
+        g_iniFile.SetMultiLine();
+        g_iniFile.SetSpaces(false);
         g_iniFile.LoadFile(iniPath.c_str());
     }
 
@@ -267,8 +271,23 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 spath = SanitizeSearchPaths(spath);
                 searchDlg.SetSearchPath(spath);
             }
+            else if (bPortable)
+            {
+                std::wstring spath = g_iniFile.GetValue(L"global", L"searchpath", L"");
+                if (!spath.empty())
+                {
+                    spath = SanitizeSearchPaths(spath);
+                    searchDlg.SetSearchString(spath);
+                }
+            }
             if (parser.HasVal(_T("searchfor")))
                 searchDlg.SetSearchString(parser.GetVal(_T("searchfor")));
+            else if (bPortable)
+            {
+                std::wstring searchfor = g_iniFile.GetValue(L"global", L"searchfor", L"");
+                if (!searchfor.empty())
+                    searchDlg.SetSearchString(searchfor);
+            }
             if (parser.HasVal(_T("filemaskregex")))
                 searchDlg.SetFileMask(parser.GetVal(_T("filemaskregex")), true);
             if (parser.HasVal(_T("filemask")))
@@ -345,10 +364,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
         if (bPortable)
         {
-            FILE * pFile = NULL;
-            _tfopen_s(&pFile, iniPath.c_str(), _T("wb"));
-            g_iniFile.SaveFile(pFile, true);
-            fclose(pFile);
+            g_iniFile.SaveFile(iniPath.c_str(), true);
         }
     }
 

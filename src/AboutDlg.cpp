@@ -51,7 +51,7 @@ LRESULT CAboutDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam
     case WM_COMMAND:
         return DoCommand(LOWORD(wParam), HIWORD(wParam));
     default:
-        return FALSE;
+        break;
     }
     return FALSE;
 }
