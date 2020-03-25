@@ -209,27 +209,17 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         if (bPortable)
             bOnlyOne = !!_wtoi(g_iniFile.GetValue(L"global", L"onlyone", L"0"));
         UINT GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWin_StartupMessage"));
-        if (SendMessage(hWnd, GREPWIN_STARTUPMSG, 0, 0))                // send the new path
+        std::wstring spath = parser.HasVal(L"searchpath") ? parser.GetVal(_T("searchpath")) : 
+          (bPortable ? g_iniFile.GetValue(L"global", L"searchpath", L"") : L"");
+        SearchReplace(spath, L"/", L"\\");
+        spath = SanitizeSearchPaths(spath);
+
+        if (SendMessage(hWnd, GREPWIN_STARTUPMSG, 0, 0) || bOnlyOne) // send the new path
         {
-            std::wstring spath = parser.GetVal(_T("searchpath"));
-            SearchReplace(spath, L"/", L"\\");
-            spath = SanitizeSearchPaths(spath);
             COPYDATASTRUCT CopyData = {0};
             CopyData.lpData = (LPVOID)spath.c_str();
             CopyData.cbData = (DWORD)spath.size()*sizeof(wchar_t);
             SendMessage(hWnd, WM_COPYDATA, 0, (LPARAM)&CopyData);
-            SetForegroundWindow(hWnd);                                  //set the window to front
-            bQuit = true;
-        }
-        else if (bOnlyOne)
-        {
-            std::wstring spath = parser.HasVal(L"searchpath") ? parser.GetVal(_T("searchpath")) : L"";
-            SearchReplace(spath, L"/", L"\\");
-            spath = SanitizeSearchPaths(spath);
-            COPYDATASTRUCT CopyData = { 0 };
-            CopyData.lpData = (LPVOID)spath.c_str();
-            CopyData.cbData = (DWORD)spath.size()*sizeof(wchar_t);
-            SendMessage(hWnd, WM_COPYDATA, 1, (LPARAM)&CopyData);
             SetForegroundWindow(hWnd);                                  //set the window to front
             bQuit = true;
         }
@@ -264,30 +254,18 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         }
         else
         {
-            CSearchDlg searchDlg(NULL);
-            if (parser.HasVal(_T("searchpath")))
-            {
-                std::wstring spath = parser.GetVal(L"searchpath");
-                spath = SanitizeSearchPaths(spath);
-                searchDlg.SetSearchPath(spath);
-            }
-            else if (bPortable)
-            {
-                std::wstring spath = g_iniFile.GetValue(L"global", L"searchpath", L"");
-                if (!spath.empty())
-                {
-                    spath = SanitizeSearchPaths(spath);
-                    searchDlg.SetSearchString(spath);
-                }
-            }
-            if (parser.HasVal(_T("searchfor")))
-                searchDlg.SetSearchString(parser.GetVal(_T("searchfor")));
-            else if (bPortable)
-            {
-                std::wstring searchfor = g_iniFile.GetValue(L"global", L"searchfor", L"");
-                if (!searchfor.empty())
-                    searchDlg.SetSearchString(searchfor);
-            }
+            CSearchDlg   searchDlg(NULL);
+
+            std::wstring spath = parser.HasVal(L"searchpath") ? parser.GetVal(_T("searchpath")) : 
+              (bPortable ? g_iniFile.GetValue(L"global", L"searchpath", L"") : L"");
+            SearchReplace(spath, L"/", L"\\");
+            spath = SanitizeSearchPaths(spath);
+            searchDlg.SetSearchPath(spath);
+
+            std::wstring searchfor = parser.HasVal(_T("searchfor")) ? parser.GetVal(_T("searchfor")) : 
+              (bPortable ? g_iniFile.GetValue(L"global", L"searchfor", L"") : L"");
+            searchDlg.SetSearchString(searchfor);
+
             if (parser.HasVal(_T("filemaskregex")))
                 searchDlg.SetFileMask(parser.GetVal(_T("filemaskregex")), true);
             if (parser.HasVal(_T("filemask")))
