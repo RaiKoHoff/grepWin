@@ -181,7 +181,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                        (parser.HasKey(_T("portable"))));
 
     std::wstring iniPath = CPathUtils::GetModuleDir(0);
-    iniPath += L"\\grepwin.ini";
+    iniPath += L"\\grepWinNP3.ini";
 
     if (parser.HasVal(L"inipath"))
         iniPath = parser.GetVal(L"inipath");
