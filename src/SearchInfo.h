@@ -39,4 +39,5 @@ public:
     FILETIME                    modifiedtime;
     bool                        readerror;
     bool                        folder;
+    bool                        skipped;
 };
