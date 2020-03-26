@@ -345,6 +345,8 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
                             wchar_t buf[40] = {0};
                             swprintf_s(buf, L"%ld", it2->number);
                             SearchReplace(cmd, L"%line%", buf);
+                            SearchReplace(cmd, L"%mode%", L"m");
+                            SearchReplace(cmd, L"%pattern%", L"");
 
                             STARTUPINFO startupInfo;
                             PROCESS_INFORMATION processInfo;
@@ -372,7 +374,10 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
                         else
                             SearchReplace(cmd, L"%line%", L"0");
 
-                        STARTUPINFO startupInfo;
+                        SearchReplace(cmd, L"%mode%", L"m");
+                        SearchReplace(cmd, L"%pattern%", L"");
+
+                        STARTUPINFO         startupInfo;
                         PROCESS_INFORMATION processInfo;
                         SecureZeroMemory(&startupInfo, sizeof(startupInfo));
                         startupInfo.cb = sizeof(STARTUPINFO);

@@ -98,10 +98,8 @@ BOOL CALLBACK windowenumerator(__in  HWND hwnd,__in  LPARAM lParam)
     HWND * pWnd = (HWND*)lParam;
     WCHAR buf[MAX_PATH] = {0};
     GetWindowText(hwnd, buf, _countof(buf));
-    if (_wcsnicmp(buf, L"grepwin :", 9) == 0)
-    {
+    if (_wcsnicmp(buf, L"grepwinnp3 :", 12) == 0)
         *pWnd = hwnd;
-    }
     return TRUE;
 }
 
@@ -205,22 +203,29 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
     if (hWnd)
     {
-        bool bOnlyOne = !!DWORD(CRegStdDWORD(_T("Software\\grepWinNP3\\onlyone"), 0));
-        if (bPortable)
-            bOnlyOne = !!_wtoi(g_iniFile.GetValue(L"global", L"onlyone", L"0"));
-        UINT GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWin_StartupMessage"));
+        bool bOnlyOne = bPortable ? g_iniFile.GetBoolValue(L"global", L"onlyone", L"false") : 
+                                    !!DWORD(CRegStdDWORD(_T("Software\\grepWinNP3\\onlyone"), 0));
+        UINT GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWinNP3_StartupMessage"));
+
         std::wstring spath = parser.HasVal(L"searchpath") ? parser.GetVal(_T("searchpath")) : 
           (bPortable ? g_iniFile.GetValue(L"global", L"searchpath", L"") : L"");
         SearchReplace(spath, L"/", L"\\");
         spath = SanitizeSearchPaths(spath);
 
+        std::wstring searchfor = parser.HasVal(_T("searchfor")) ? parser.GetVal(_T("searchfor")) : 
+          (bPortable ? g_iniFile.GetValue(L"global", L"searchfor", L"") : L"");
+
         if (SendMessage(hWnd, GREPWIN_STARTUPMSG, 0, 0) || bOnlyOne) // send the new path
         {
             COPYDATASTRUCT CopyData = {0};
             CopyData.lpData = (LPVOID)spath.c_str();
-            CopyData.cbData = (DWORD)spath.size()*sizeof(wchar_t);
+            CopyData.cbData = (DWORD)spath.size() * sizeof(wchar_t);
             SendMessage(hWnd, WM_COPYDATA, 0, (LPARAM)&CopyData);
-            SetForegroundWindow(hWnd);                                  //set the window to front
+            CopyData.dwData = 0;
+            CopyData.lpData = (LPVOID)searchfor.c_str();
+            CopyData.cbData = (DWORD)searchfor.size() * sizeof(wchar_t);
+            SendMessage(hWnd, WM_COPYDATA, 2, (LPARAM)&CopyData);
+            SetForegroundWindow(hWnd); //set the window to front
             bQuit = true;
         }
     }
@@ -336,14 +341,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 }
                 searchDlg.SetDateLimit(parser.GetLongVal(L"datelimit"), date1, date2);
             }
-
             ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, NULL, IDR_SEARCHDLG);
         }
 
         if (bPortable)
-        {
             g_iniFile.SaveFile(iniPath.c_str(), true);
-        }
     }
 
     ::CoUninitialize();

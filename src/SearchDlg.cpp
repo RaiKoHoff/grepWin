@@ -64,7 +64,7 @@
 
 DWORD WINAPI SearchThreadEntry(LPVOID lpParam);
 
-UINT CSearchDlg::GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWin_StartupMessage"));
+UINT CSearchDlg::GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWinNP3_StartupMessage"));
 std::map<size_t, DWORD> linepositions;
 
 extern ULONGLONG g_startTime;
@@ -610,18 +610,31 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             if (lParam)
             {
                 PCOPYDATASTRUCT pCopyData = (PCOPYDATASTRUCT)lParam;
-                std::wstring newpath = std::wstring((LPCTSTR)pCopyData->lpData, pCopyData->cbData/sizeof(wchar_t));
-                if (!newpath.empty())
+                std::wstring cpydata = std::wstring((LPCTSTR)pCopyData->lpData, (pCopyData->cbData / sizeof(wchar_t)));
+                if (!cpydata.empty())
                 {
-                    auto buf = GetDlgItemText(IDC_SEARCHPATH);
+                    auto buf     = GetDlgItemText(IDC_SEARCHPATH);
                     m_searchpath = buf.get();
 
-                    if (wParam == 1)
-                        m_searchpath.clear();
-                    else
-                        m_searchpath += _T("|");
-                    m_searchpath += newpath;
-                    SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchpath.c_str());
+                    switch ((DWORD)wParam)
+                    {
+                        case 0:
+                            m_searchpath.clear();
+                            m_searchpath = cpydata;
+                            SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchpath.c_str());
+                            break;
+
+                        case 1:
+                            m_searchpath += _T("|");
+                            m_searchpath += cpydata;
+                            SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchpath.c_str());
+                            break;
+
+                        case 2:
+                            m_searchString = cpydata;
+                            SetDlgItemText(hwndDlg, IDC_SEARCHTEXT, m_searchString.c_str());
+                            break;
+                    }
                     g_startTime = GetTickCount();
                 }
             }
