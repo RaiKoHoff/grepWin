@@ -2439,10 +2439,11 @@ DWORD CSearchDlg::SearchThread()
                     bool bPattern = MatchPath(pathbuf.get());
 
                     int nFound = -1;
-                    if ((bSearch && bPattern)||(bAlwaysSearch))
+                    bool skipped = true;
+                    if ((bSearch && bPattern) || (bAlwaysSearch))
                     {
                         CSearchInfo sinfo(pathbuf.get());
-                        sinfo.filesize = fullfilesize;
+                        sinfo.filesize     = fullfilesize;
                         sinfo.modifiedtime = ft;
                         if (m_searchString.empty())
                         {
@@ -2455,8 +2456,9 @@ DWORD CSearchDlg::SearchThread()
                             if (nFound >= 0)
                                 SendMessage(*this, SEARCH_FOUND, nFound, (LPARAM)&sinfo);
                         }
+                        skipped = sinfo.skipped;
                     }
-                    SendMessage(*this, SEARCH_PROGRESS, ((bSearch && bPattern)||bAlwaysSearch) && (nFound >= 0), 0);
+                    SendMessage(*this, SEARCH_PROGRESS, ((bSearch && bPattern && !skipped) || bAlwaysSearch) && (nFound >= 0), 0);
                 }
                 else
                 {
@@ -2767,6 +2769,7 @@ int CSearchDlg::SearchFile(CSearchInfo& sinfo, const std::wstring& searchRoot, b
         catch (const std::exception&)
         {
             m_searchedFile.clear();
+            sinfo.skipped = true;
             return -1;
         }
     }
@@ -2775,6 +2778,7 @@ int CSearchDlg::SearchFile(CSearchInfo& sinfo, const std::wstring& searchRoot, b
         if (type == CTextFile::AUTOTYPE)
         {
             sinfo.readerror = true;
+            sinfo.skipped   = true;
             m_searchedFile.clear();
             return 0;
         }
@@ -2828,7 +2832,10 @@ int CSearchDlg::SearchFile(CSearchInfo& sinfo, const std::wstring& searchRoot, b
                         flags |= boost::match_not_bob;
                         bFound = true;
                         if (m_Cancelled)
+                        {
+                            sinfo.skipped = true;
                             break;
+                        }
                     }
                 }
                 if (type == CTextFile::BINARY)
@@ -2852,7 +2859,10 @@ int CSearchDlg::SearchFile(CSearchInfo& sinfo, const std::wstring& searchRoot, b
                         flags |= boost::match_not_bob;
                         bFound = true;
                         if (m_Cancelled)
+                        {
+                            sinfo.skipped = true;
                             break;
+                        }
                     }
                 }
 
@@ -2970,21 +2980,23 @@ int CSearchDlg::SearchFile(CSearchInfo& sinfo, const std::wstring& searchRoot, b
                         if (!m_bCreateBackup)
                             MoveFileExA(filepathout.c_str(), filepath.c_str(), MOVEFILE_REPLACE_EXISTING);
                     }
-
-
                 }
             }
             catch (const std::exception&)
             {
                 m_searchedFile.clear();
+                sinfo.skipped = true;
                 return -1;
             }
             catch (...)
             {
                 m_searchedFile.clear();
+                sinfo.skipped = true;
                 return -1;
             }
         }
+        else
+            sinfo.skipped = true;
     }
     m_searchedFile.clear();
     if (m_bNOTSearch)
