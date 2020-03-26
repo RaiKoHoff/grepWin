@@ -42,7 +42,7 @@ LRESULT CAboutDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam
             InitDialog(hwndDlg, IDI_GREPWIN);
             CLanguage::Instance().TranslateWindow(*this);
             TCHAR buf[MAX_PATH] = {0};
-            _stprintf_s(buf, _countof(buf), _T("grepWin version %ld.%ld.%ld.%ld"), GREPWIN_VERMAJOR, GREPWIN_VERMINOR, GREPWIN_VERMICRO, GREPWIN_VERBUILD);
+            _stprintf_s(buf, _countof(buf), _T("grepWinNP3 version %ld.%ld.%ld.%ld"), GREPWIN_VERMAJOR, GREPWIN_VERMINOR, GREPWIN_VERMICRO, GREPWIN_VERBUILD);
             SetDlgItemText(*this, IDC_VERSIONINFO, buf);
             SetDlgItemText(*this, IDC_DATE, _T(GREPWIN_VERDATE));
             m_link.ConvertStaticToHyperlink(hwndDlg, IDC_WEBLINK, _T("http://tools.stefankueng.com"));
@@ -51,7 +51,7 @@ LRESULT CAboutDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam
     case WM_COMMAND:
         return DoCommand(LOWORD(wParam), HIWORD(wParam));
     default:
-        return FALSE;
+        break;
     }
     return FALSE;
 }

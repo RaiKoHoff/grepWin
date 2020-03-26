@@ -64,7 +64,7 @@
 
 DWORD WINAPI SearchThreadEntry(LPVOID lpParam);
 
-UINT CSearchDlg::GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWin_StartupMessage"));
+UINT CSearchDlg::GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWinNP3_StartupMessage"));
 std::map<size_t, DWORD> linepositions;
 
 extern ULONGLONG g_startTime;
@@ -109,30 +109,30 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_Date1({0})
     , m_Date2({0})
     , m_bDateLimitC(false)
-    , m_regUseRegex(_T("Software\\grepWin\\UseRegex"), 1)
-    , m_regAllSize(_T("Software\\grepWin\\AllSize"))
-    , m_regSize(_T("Software\\grepWin\\Size"), L"2000")
-    , m_regSizeCombo(_T("Software\\grepWin\\SizeCombo"), 0)
-    , m_regIncludeSystem(_T("Software\\grepWin\\IncludeSystem"))
-    , m_regIncludeHidden(_T("Software\\grepWin\\IncludeHidden"))
-    , m_regIncludeSubfolders(_T("Software\\grepWin\\IncludeSubfolders"), 1)
-    , m_regIncludeBinary(_T("Software\\grepWin\\IncludeBinary"), 1)
-    , m_regCreateBackup(_T("Software\\grepWin\\CreateBackup"))
-    , m_regUTF8(_T("Software\\grepWin\\UTF8"))
-    , m_regCaseSensitive(_T("Software\\grepWin\\CaseSensitive"))
-    , m_regDotMatchesNewline(_T("Software\\grepWin\\DotMatchesNewline"))
-    , m_regUseRegexForPaths(_T("Software\\grepWin\\UseFileMatchRegex"))
-    , m_regPattern(_T("Software\\grepWin\\pattern"))
-    , m_regExcludeDirsPattern(_T("Software\\grepWin\\ExcludeDirsPattern"))
-    , m_regSearchPath(_T("Software\\grepWin\\searchpath"))
-    , m_regEditorCmd(_T("Software\\grepWin\\editorcmd"))
-    , m_regBackupInFolder(L"Software\\grepWin\\backupinfolder", FALSE)
-    , m_regDateLimit(L"Software\\grepWin\\DateLimit", 0)
-    , m_regDate1Low(L"Software\\grepWin\\Date1Low", 0)
-    , m_regDate1High(L"Software\\grepWin\\Date1High", 0)
-    , m_regDate2Low(L"Software\\grepWin\\Date2Low", 0)
-    , m_regDate2High(L"Software\\grepWin\\Date2High", 0)
-    , m_regShowContent(L"Software\\grepWin\\ShowContent", 0)
+    , m_regUseRegex(_T("Software\\grepWinNP3\\UseRegex"), 1)
+    , m_regAllSize(_T("Software\\grepWinNP3\\AllSize"))
+    , m_regSize(_T("Software\\grepWinNP3\\Size"), L"2000")
+    , m_regSizeCombo(_T("Software\\grepWinNP3\\SizeCombo"), 0)
+    , m_regIncludeSystem(_T("Software\\grepWinNP3\\IncludeSystem"))
+    , m_regIncludeHidden(_T("Software\\grepWinNP3\\IncludeHidden"))
+    , m_regIncludeSubfolders(_T("Software\\grepWinNP3\\IncludeSubfolders"), 1)
+    , m_regIncludeBinary(_T("Software\\grepWinNP3\\IncludeBinary"), 1)
+    , m_regCreateBackup(_T("Software\\grepWinNP3\\CreateBackup"))
+    , m_regUTF8(_T("Software\\grepWinNP3\\UTF8"))
+    , m_regCaseSensitive(_T("Software\\grepWinNP3\\CaseSensitive"))
+    , m_regDotMatchesNewline(_T("Software\\grepWinNP3\\DotMatchesNewline"))
+    , m_regUseRegexForPaths(_T("Software\\grepWinNP3\\UseFileMatchRegex"))
+    , m_regPattern(_T("Software\\grepWinNP3\\pattern"))
+    , m_regExcludeDirsPattern(_T("Software\\grepWinNP3\\ExcludeDirsPattern"))
+    , m_regSearchPath(_T("Software\\grepWinNP3\\searchpath"))
+    , m_regEditorCmd(_T("Software\\grepWinNP3\\editorcmd"))
+    , m_regBackupInFolder(L"Software\\grepWinNP3\\backupinfolder", FALSE)
+    , m_regDateLimit(L"Software\\grepWinNP3\\DateLimit", 0)
+    , m_regDate1Low(L"Software\\grepWinNP3\\Date1Low", 0)
+    , m_regDate1High(L"Software\\grepWinNP3\\Date1High", 0)
+    , m_regDate2Low(L"Software\\grepWinNP3\\Date2Low", 0)
+    , m_regDate2High(L"Software\\grepWinNP3\\Date2High", 0)
+    , m_regShowContent(L"Software\\grepWinNP3\\ShowContent", 0)
     , m_AutoCompleteFilePatterns(bPortable ? &g_iniFile : NULL)
     , m_AutoCompleteExcludeDirsPatterns(bPortable ? &g_iniFile : NULL)
     , m_AutoCompleteSearchPatterns(bPortable ? &g_iniFile : NULL)
@@ -238,15 +238,15 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_pDropTarget->AddSuportedFormat(ftetc);
             SHAutoComplete(GetDlgItem(*this, IDC_SEARCHPATH), SHACF_FILESYSTEM|SHACF_AUTOSUGGEST_FORCE_ON);
 
-            m_AutoCompleteFilePatterns.Load(_T("Software\\grepWin\\History"), _T("FilePattern"));
+            m_AutoCompleteFilePatterns.Load(_T("Software\\grepWinNP3\\History"), _T("FilePattern"));
             m_AutoCompleteFilePatterns.Init(GetDlgItem(hwndDlg, IDC_PATTERN));
-            m_AutoCompleteExcludeDirsPatterns.Load(_T("Software\\grepWin\\History"), _T("ExcludeDirsPattern"));
+            m_AutoCompleteExcludeDirsPatterns.Load(_T("Software\\grepWinNP3\\History"), _T("ExcludeDirsPattern"));
             m_AutoCompleteExcludeDirsPatterns.Init(GetDlgItem(hwndDlg, IDC_EXCLUDEDIRSPATTERN));
-            m_AutoCompleteSearchPatterns.Load(_T("Software\\grepWin\\History"), _T("SearchPattern"));
+            m_AutoCompleteSearchPatterns.Load(_T("Software\\grepWinNP3\\History"), _T("SearchPattern"));
             m_AutoCompleteSearchPatterns.Init(GetDlgItem(hwndDlg, IDC_SEARCHTEXT));
-            m_AutoCompleteReplacePatterns.Load(_T("Software\\grepWin\\History"), _T("ReplacePattern"));
+            m_AutoCompleteReplacePatterns.Load(_T("Software\\grepWinNP3\\History"), _T("ReplacePattern"));
             m_AutoCompleteReplacePatterns.Init(GetDlgItem(hwndDlg, IDC_REPLACETEXT));
-            m_AutoCompleteSearchPaths.Load(_T("Software\\grepWin\\History"), _T("SearchPaths"));
+            m_AutoCompleteSearchPaths.Load(_T("Software\\grepWinNP3\\History"), _T("SearchPaths"));
             m_AutoCompleteSearchPaths.Init(GetDlgItem(hwndDlg, IDC_SEARCHPATH));
 
             m_editFilePatterns.Subclass(hwndDlg, IDC_PATTERN);
@@ -322,6 +322,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 m_Date2.dwHighDateTime = bPortable ? wcstoul(g_iniFile.GetValue(L"global", L"Date2High", L"0"), nullptr, 10) : DWORD(m_regDate2High);
             }
 
+            m_bUseRegex = (bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"UseRegex", L"0")) : DWORD(m_regUseRegex)) ? true : false;
+
             SendDlgItemMessage(hwndDlg, IDC_SIZECOMBO, CB_SETCURSEL, m_sizeCmp, 0);
 
             SendDlgItemMessage(hwndDlg, IDC_INCLUDESUBFOLDERS, BM_SETCHECK, m_bIncludeSubfolders ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -333,12 +335,12 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             SendDlgItemMessage(hwndDlg, IDC_CASE_SENSITIVE, BM_SETCHECK, m_bCaseSensitive ? BST_CHECKED : BST_UNCHECKED, 0);
             SendDlgItemMessage(hwndDlg, IDC_DOTMATCHNEWLINE, BM_SETCHECK, m_bDotMatchesNewline ? BST_CHECKED : BST_UNCHECKED, 0);
 
-            CheckRadioButton(hwndDlg, IDC_REGEXRADIO, IDC_TEXTRADIO, (bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"UseRegex", L"0")) : DWORD(m_regUseRegex)) ? IDC_REGEXRADIO : IDC_TEXTRADIO);
+            CheckRadioButton(hwndDlg, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
             CheckRadioButton(hwndDlg, IDC_ALLSIZERADIO, IDC_SIZERADIO, m_bAllSize ? IDC_ALLSIZERADIO : IDC_SIZERADIO);
             CheckRadioButton(hwndDlg, IDC_FILEPATTERNREGEX, IDC_FILEPATTERNTEXT, m_bUseRegexForPaths ? IDC_FILEPATTERNREGEX : IDC_FILEPATTERNTEXT);
 
-            if (!m_searchString.empty())
-                CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
+            //if (!m_searchString.empty())
+            //    CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
 
             DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
             DialogEnableWindow(IDC_ADDTOBOOKMARKS, FALSE);
@@ -464,7 +466,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             }
             else
             {
-                if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWin"), _T("windowpos"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
+                if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowpos"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
                     SetWindowPlacement(*this, &wpl);
                 else
                     ShowWindow(*this, SW_SHOW);
@@ -486,7 +488,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         return FALSE;
     case WM_CLOSE:
         {
-            if (!DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)))
+            if (!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)))
             {
                 if (m_dwThreadRunning)
                     InterlockedExchange(&m_Cancelled, TRUE);
@@ -608,18 +610,31 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             if (lParam)
             {
                 PCOPYDATASTRUCT pCopyData = (PCOPYDATASTRUCT)lParam;
-                std::wstring newpath = std::wstring((LPCTSTR)pCopyData->lpData, pCopyData->cbData/sizeof(wchar_t));
-                if (!newpath.empty())
+                std::wstring cpydata = std::wstring((LPCTSTR)pCopyData->lpData, (pCopyData->cbData / sizeof(wchar_t)));
+                if (!cpydata.empty())
                 {
-                    auto buf = GetDlgItemText(IDC_SEARCHPATH);
+                    auto buf     = GetDlgItemText(IDC_SEARCHPATH);
                     m_searchpath = buf.get();
 
-                    if (wParam == 1)
-                        m_searchpath.clear();
-                    else
-                        m_searchpath += _T("|");
-                    m_searchpath += newpath;
-                    SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchpath.c_str());
+                    switch ((DWORD)wParam)
+                    {
+                        case 0:
+                            m_searchpath.clear();
+                            m_searchpath = cpydata;
+                            SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchpath.c_str());
+                            break;
+
+                        case 1:
+                            m_searchpath += _T("|");
+                            m_searchpath += cpydata;
+                            SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchpath.c_str());
+                            break;
+
+                        case 2:
+                            m_searchString = cpydata;
+                            SetDlgItemText(hwndDlg, IDC_SEARCHTEXT, m_searchString.c_str());
+                            break;
+                    }
                     g_startTime = GetTickCount();
                 }
             }
@@ -682,7 +697,6 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_searchString = m_pBookmarksDlg->GetSelectedSearchString();
             m_replaceString = m_pBookmarksDlg->GetSelectedReplaceString();
             m_bUseRegex = m_pBookmarksDlg->GetSelectedUseRegex();
-
             m_bCaseSensitive = m_pBookmarksDlg->GetSelectedSearchCase();
             m_bDotMatchesNewline = m_pBookmarksDlg->GetSelectedDotMatchNewline();
             m_bCreateBackup = m_pBookmarksDlg->GetSelectedBackup();
@@ -781,7 +795,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     auto msgtext = CStringUtils::Format((LPCWSTR)TranslatedString(hResource, IDS_REPLACECONFIRM).c_str(),
                                                         m_searchString.c_str(),
                                                         m_replaceString.empty() ? (LPCWSTR)TranslatedString(hResource, IDS_ANEMPTYSTRING).c_str() : m_replaceString.c_str());
-                    if (::MessageBox(*this, msgtext.c_str(), _T("grepWin"), MB_ICONQUESTION | MB_YESNO) != IDYES)
+                    if (::MessageBox(*this, msgtext.c_str(), _T("grepWinNP3"), MB_ICONQUESTION | MB_YESNO) != IDYES)
                     {
                         break;
                     }
@@ -818,7 +832,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         break;
     case IDCANCEL:
         {
-            if (DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)))
+            if (DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)))
             {
                 if (m_dwThreadRunning)
                     InterlockedExchange(&m_Cancelled, TRUE);
@@ -920,11 +934,11 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 DialogEnableWindow(IDC_FILEPATTERNREGEX, bIsDir);
                 DialogEnableWindow(IDC_FILEPATTERNTEXT, bIsDir);
 
-                // change the dialog title to "grepWin : search/path"
+                // change the dialog title to "grepWinNP3 : search/path"
                 TCHAR compactPath[100] = {0};
                 PathCompactPathEx(compactPath, buf.get(), 40, 0);
                 TCHAR titleBuf[MAX_PATH] = {0};
-                _stprintf_s(titleBuf, _countof(titleBuf), _T("grepWin : %s"), compactPath);
+                _stprintf_s(titleBuf, _countof(titleBuf), _T("grepWinNP3 : %s"), compactPath);
                 SetWindowText(*this, titleBuf);
             }
         }
@@ -981,9 +995,15 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
     case IDC_TEXTRADIO:
         {
             CheckRegex();
-            DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
+            DialogEnableWindow(IDC_TESTREGEX, m_bUseRegex);
         }
         break;
+    case IDC_FILEPATTERNTEXT:
+    case IDC_FILEPATTERNREGEX:
+        {
+            m_bUseRegexForPaths = (IsDlgButtonChecked(*this, IDC_FILEPATTERNREGEX) == BST_CHECKED);
+        }
+    break;
     case IDC_ADDTOBOOKMARKS:
         {
             auto buf = GetDlgItemText(IDC_SEARCHTEXT);
@@ -994,7 +1014,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
             m_excludedirspatternregex = buf.get();
             buf = GetDlgItemText(IDC_PATTERN);
             m_patternregex = buf.get();
-            bool bUseRegex = (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED);
 
             CNameDlg nameDlg(*this);
             if (nameDlg.DoModal(hResource, IDD_NAME, *this) == IDOK)
@@ -1005,7 +1024,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 bk.Name = nameDlg.GetName();
                 bk.Search = m_searchString;
                 bk.Replace = m_replaceString;
-                bk.UseRegex = bUseRegex;
+                bk.UseRegex = m_bUseRegex;
                 bk.CaseSensitive = (IsDlgButtonChecked(*this, IDC_CASE_SENSITIVE) == BST_CHECKED);
                 bk.DotMatchesNewline = (IsDlgButtonChecked(*this, IDC_DOTMATCHNEWLINE) == BST_CHECKED);
                 bk.Backup = (IsDlgButtonChecked(*this, IDC_CREATEBACKUP) == BST_CHECKED);
@@ -1163,7 +1182,7 @@ void CSearchDlg::SaveWndPosition()
     }
     else
     {
-        SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWin"), _T("windowpos"), REG_NONE, &wpl, sizeof(wpl));
+        SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowpos"), REG_NONE, &wpl, sizeof(wpl));
     }
 }
 
@@ -1789,7 +1808,7 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
     if (dotPos != std::wstring::npos)
         ext = inf.filepath.substr(dotPos);
 
-    CRegStdString regEditorCmd(L"Software\\grepWin\\editorcmd");
+    CRegStdString regEditorCmd(L"Software\\grepWinNP3\\editorcmd");
     std::wstring cmd = regEditorCmd;
     if (bPortable)
         cmd = g_iniFile.GetValue(L"global", L"editorcmd", L"");
@@ -1821,6 +1840,12 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
         }
 
         SearchReplace(cmd, L"%path%", inf.filepath.c_str());
+
+        // Notepad3 special
+        SearchReplace(cmd, L"%mode%", m_bUseRegex ? L"mr" : L"m");
+        std::wstring searchfor = m_searchString;
+        SearchReplace(searchfor, _T("\""), _T("\\\""));
+        SearchReplace(cmd, L"%pattern%", searchfor.c_str());
 
         STARTUPINFO startupInfo;
         PROCESS_INFORMATION processInfo;
@@ -2025,10 +2050,11 @@ bool CSearchDlg::SaveSettings()
     if (m_searchpath.empty())
         return false;
     if (bPortable)
+        g_iniFile.SetValue(L"global", L"searchfor", m_searchString.c_str());
+    if (bPortable)
         g_iniFile.SetValue(L"global", L"searchpath", m_searchpath.c_str());
     else
         m_regSearchPath = m_searchpath;
-    m_bUseRegex = (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED);
     if (bPortable)
         g_iniFile.SetValue(L"global", L"UseRegex", m_bUseRegex ? L"1" : L"0");
     else
@@ -2041,7 +2067,6 @@ bool CSearchDlg::SaveSettings()
             return false;
         }
     }
-    m_bUseRegexForPaths = (IsDlgButtonChecked(*this, IDC_FILEPATTERNREGEX) == BST_CHECKED);
     if (bPortable)
         g_iniFile.SetValue(L"global", L"UseFileMatchRegex", m_bUseRegexForPaths ? L"1" : L"0");
     else
@@ -2110,6 +2135,8 @@ bool CSearchDlg::SaveSettings()
 
     if (bPortable)
     {
+        g_iniFile.SetValue(L"global", L"searchfor", m_searchString.c_str());
+        g_iniFile.SetValue(L"global", L"searchpath", m_searchpath.c_str());
         g_iniFile.SetValue(L"global", L"IncludeSystem", m_bIncludeSystem ? L"1" : L"0");
         g_iniFile.SetValue(L"global", L"IncludeHidden", m_bIncludeHidden ? L"1" : L"0");
         g_iniFile.SetValue(L"global", L"IncludeSubfolders", m_bIncludeSubfolders ? L"1" : L"0");
@@ -3010,6 +3037,8 @@ int CSearchDlg::CheckRegex()
     int len = (int)_tcslen(buf.get());
     if (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED)
     {
+        m_bUseRegex = true;
+
         // check if the regex is valid
         bool bValid = true;
         if (len)
@@ -3055,12 +3084,12 @@ int CSearchDlg::CheckRegex()
     }
     else
     {
+        m_bUseRegex = false;
         SetDlgItemText(*this, IDC_REGEXOKLABEL, _T(""));
         DialogEnableWindow(IDOK, true);
         DialogEnableWindow(IDC_REPLACE, len>0);
         DialogEnableWindow(IDC_CREATEBACKUP, len>0);
     }
-
     return len;
 }
 

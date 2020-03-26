@@ -27,14 +27,16 @@
 
 CSettingsDlg::CSettingsDlg(HWND hParent)
     : m_hParent(hParent)
-    , m_regEditorCmd(_T("Software\\grepWin\\editorcmd"))
-    , m_regEsc(_T("Software\\grepWin\\escclose"), FALSE)
+    , m_regEditorCmd(_T("Software\\grepWinNP3\\editorcmd"))
+    , m_regEsc(_T("Software\\grepWinNP3\\escclose"), FALSE)
 {
 }
 
 CSettingsDlg::~CSettingsDlg(void)
 {
 }
+
+const wchar_t* const stdEditorCmd = _T(".\\Notepad3.exe /%mode% \"%pattern%\" /g %line% - %path%");
 
 LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -48,24 +50,48 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             CLanguage::Instance().TranslateWindow(*this);
             AddToolTip(IDC_ONLYONE, TranslatedString(hResource, IDS_ONLYONE_TT).c_str());
 
-            SetDlgItemText(hwndDlg, IDC_EDITORCMD, bPortable ? g_iniFile.GetValue(L"global", L"editorcmd", L"") : std::wstring(m_regEditorCmd).c_str());
+            std::wstring editorCmd = bPortable ? g_iniFile.GetValue(L"global", L"editorcmd", L"") : std::wstring(m_regEditorCmd);
+            if (editorCmd.empty()) 
+                editorCmd = stdEditorCmd;
+
+            SetDlgItemText(hwndDlg, IDC_EDITORCMD, editorCmd.c_str());
 
             wchar_t modulepath[MAX_PATH] = {0};
             GetModuleFileName(NULL, modulepath, MAX_PATH);
+            PathRemoveFileSpec(modulepath);
             std::wstring path = modulepath;
-            path = path.substr(0, path.find_last_of('\\'));
-            CDirFileEnum fileEnumerator(path.c_str());
             bool bRecurse = false;
             bool bIsDirectory = false;
             std::wstring sPath;
-            CRegStdString regLang(L"Software\\grepWin\\languagefile");
-            std::wstring setLang = regLang;
+            CRegStdString regLang(L"Software\\grepWinNP3\\languagefile");
+            std::wstring  setLang = regLang;
+
             if (bPortable)
-                setLang = g_iniFile.GetValue(L"global", L"languagefile", L"");
+            {
+                const std::wstring& languagefile = g_iniFile.GetValue(L"global", L"languagefile", L"");
+
+                if (PathIsRelative(languagefile.c_str()))
+                {
+                    PathAppend(modulepath, languagefile.c_str());
+                    setLang = modulepath;
+                }
+                else
+                    setLang = languagefile;
+
+                // need to adapt file enumerator path
+                if (!languagefile.empty())
+                {
+                    lstrcpyn(modulepath, setLang.c_str(), MAX_PATH);
+                    PathRemoveFileSpec(modulepath);
+                }
+                path = modulepath;
+            }
 
             int index = 1;
             int langIndex = 0;
-            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"English");
+            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"English (United States) [en-US]");
+
+            CDirFileEnum fileEnumerator(path.c_str());
             while (fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse))
             {
                 size_t dotpos = sPath.find_last_of('.');
@@ -88,15 +114,15 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             }
 
             SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_SETCURSEL, langIndex, 0);
-            SendDlgItemMessage(hwndDlg, IDC_ESCKEY, BM_SETCHECK, bPortable ? !!_wtoi(g_iniFile.GetValue(L"settings", L"escclose", L"0")) : DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
-            SendDlgItemMessage(hwndDlg, IDC_BACKUPINFOLDER, BM_SETCHECK, bPortable ? !!_wtoi(g_iniFile.GetValue(L"settings", L"backupinfolder", L"0")) : DWORD(CRegStdDWORD(L"Software\\grepWin\\backupinfolder", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
-            SendDlgItemMessage(hwndDlg, IDC_ONLYONE, BM_SETCHECK, bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"onlyone", L"0")) : DWORD(CRegStdDWORD(L"Software\\grepWin\\onlyone", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
+            SendDlgItemMessage(hwndDlg, IDC_ESCKEY, BM_SETCHECK, bPortable ? g_iniFile.GetBoolValue(L"settings", L"escclose", false) : !!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
+            SendDlgItemMessage(hwndDlg, IDC_BACKUPINFOLDER, BM_SETCHECK, bPortable ? g_iniFile.GetBoolValue(L"settings", L"backupinfolder", false) : !!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\backupinfolder", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
+            SendDlgItemMessage(hwndDlg, IDC_ONLYONE, BM_SETCHECK, bPortable ? g_iniFile.GetBoolValue(L"global", L"onlyone", false) : !!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\onlyone", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
 
             AddToolTip(IDC_BACKUPINFOLDER, TranslatedString(hResource, IDS_BACKUPINFOLDER_TT).c_str());
 
-
             m_resizer.Init(hwndDlg);
             m_resizer.AddControl(hwndDlg, IDC_EDITORGROUP, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_RESETDEFAULT, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_EDITORCMD, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_SEARCHPATHBROWSE, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_STATIC1, RESIZER_TOPLEFTRIGHT);
@@ -137,6 +163,9 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
 {
     switch (id)
     {
+    case IDC_RESETDEFAULT:
+            SetDlgItemText(*this, IDC_EDITORCMD, stdEditorCmd);
+        break;
     case IDOK:
         {
             auto buf = GetDlgItemText(IDC_EDITORCMD);
@@ -147,10 +176,19 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
             int langIndex = (int)SendDlgItemMessage(*this, IDC_LANGUAGE, CB_GETCURSEL, 0, 0);
             std::wstring langpath = langIndex==0 ? L"" : m_langpaths[langIndex-1];
             if (bPortable)
-                g_iniFile.SetValue(L"global", L"languagefile", langpath.c_str());
+            {
+                TCHAR wchLngPath[MAX_PATH] = {L'\0'};
+                GetModuleFileName(NULL, wchLngPath, MAX_PATH);
+                TCHAR wchAppPath[MAX_PATH] = {L'\0'};
+                PathCanonicalize(wchAppPath, wchLngPath);
+                if (PathRelativePathTo(wchLngPath, wchAppPath, FILE_ATTRIBUTE_NORMAL, langpath.c_str(), FILE_ATTRIBUTE_NORMAL))
+                    g_iniFile.SetValue(L"global", L"languagefile", wchLngPath);
+                else
+                    g_iniFile.SetValue(L"global", L"languagefile", langpath.c_str());
+            }
             else
             {
-                CRegStdString regLang(L"Software\\grepWin\\languagefile");
+                CRegStdString regLang(L"Software\\grepWinNP3\\languagefile");
                 if (langIndex==0)
                 {
                     regLang.removeValue();
@@ -165,17 +203,17 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
 
             if (bPortable)
             {
-                g_iniFile.SetValue(L"settings", L"escclose", (IsDlgButtonChecked(*this, IDC_ESCKEY) == BST_CHECKED) ? L"1" : L"0");
-                g_iniFile.SetValue(L"settings", L"backupinfolder", (IsDlgButtonChecked(*this, IDC_BACKUPINFOLDER) == BST_CHECKED) ? L"1" : L"0");
-                g_iniFile.SetValue(L"global", L"onlyone", IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED ? L"1" : L"0");
+                g_iniFile.SetBoolValue(L"settings", L"escclose", (IsDlgButtonChecked(*this, IDC_ESCKEY) == BST_CHECKED));
+                g_iniFile.SetBoolValue(L"settings", L"backupinfolder", (IsDlgButtonChecked(*this, IDC_BACKUPINFOLDER) == BST_CHECKED));
+                g_iniFile.SetBoolValue(L"global", L"onlyone", (IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED));
             }
             else
             {
-                CRegStdDWORD esc(L"Software\\grepWin\\escclose", FALSE);
+                CRegStdDWORD esc(L"Software\\grepWinNP3\\escclose", FALSE);
                 esc = (IsDlgButtonChecked(*this, IDC_ESCKEY) == BST_CHECKED);
-                CRegStdDWORD backup(L"Software\\grepWin\\backupinfolder", FALSE);
+                CRegStdDWORD backup(L"Software\\grepWinNP3\\backupinfolder", FALSE);
                 backup = (IsDlgButtonChecked(*this, IDC_BACKUPINFOLDER) == BST_CHECKED);
-                CRegStdDWORD regOnlyOne(L"Software\\grepWin\\onlyone", FALSE);
+                CRegStdDWORD regOnlyOne(L"Software\\grepWinNP3\\onlyone", FALSE);
                 regOnlyOne = (IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED);
             }
     }

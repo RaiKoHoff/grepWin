@@ -48,6 +48,6 @@ extern HINSTANCE g_hInst;
 extern bool bPortable;
 extern CSimpleIni g_iniFile;
 
-#define DEBUGOUTPUTREGPATH L"Software\\grepWin\\DebugOutput"
+#define DEBUGOUTPUTREGPATH L"Software\\grepWinNP3\\DebugOutput"
 
 #pragma comment(linker, "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
