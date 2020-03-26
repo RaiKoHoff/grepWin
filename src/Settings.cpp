@@ -36,6 +36,8 @@ CSettingsDlg::~CSettingsDlg(void)
 {
 }
 
+const wchar_t* const stdEditorCmd = _T(".\\Notepad3.exe /%mode% \"%pattern%\" /g %line% - %path%");
+
 LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -48,7 +50,11 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             CLanguage::Instance().TranslateWindow(*this);
             AddToolTip(IDC_ONLYONE, TranslatedString(hResource, IDS_ONLYONE_TT).c_str());
 
-            SetDlgItemText(hwndDlg, IDC_EDITORCMD, bPortable ? g_iniFile.GetValue(L"global", L"editorcmd", L"") : std::wstring(m_regEditorCmd).c_str());
+            std::wstring editorCmd = bPortable ? g_iniFile.GetValue(L"global", L"editorcmd", L"") : std::wstring(m_regEditorCmd);
+            if (editorCmd.empty()) 
+                editorCmd = stdEditorCmd;
+
+            SetDlgItemText(hwndDlg, IDC_EDITORCMD, editorCmd.c_str());
 
             wchar_t modulepath[MAX_PATH] = {0};
             GetModuleFileName(NULL, modulepath, MAX_PATH);
@@ -114,9 +120,9 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
             AddToolTip(IDC_BACKUPINFOLDER, TranslatedString(hResource, IDS_BACKUPINFOLDER_TT).c_str());
 
-
             m_resizer.Init(hwndDlg);
             m_resizer.AddControl(hwndDlg, IDC_EDITORGROUP, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_RESETDEFAULT, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_EDITORCMD, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_SEARCHPATHBROWSE, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_STATIC1, RESIZER_TOPLEFTRIGHT);
@@ -157,6 +163,9 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
 {
     switch (id)
     {
+    case IDC_RESETDEFAULT:
+            SetDlgItemText(*this, IDC_EDITORCMD, stdEditorCmd);
+        break;
     case IDOK:
         {
             auto buf = GetDlgItemText(IDC_EDITORCMD);
