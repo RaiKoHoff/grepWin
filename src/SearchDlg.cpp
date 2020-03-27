@@ -1069,6 +1069,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
             CSettingsDlg dlgSettings(*this);
             dlgSettings.DoModal(hResource, IDD_SETTINGS, *this);
             m_regBackupInFolder.read();
+            CLanguage::Instance().TranslateWindow(*this); // re-apply, cause update problems?
         }
         break;
     case IDC_EDITMULTILINE1:

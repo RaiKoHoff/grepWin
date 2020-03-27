@@ -216,7 +216,7 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
                 CRegStdDWORD regOnlyOne(L"Software\\grepWinNP3\\onlyone", FALSE);
                 regOnlyOne = (IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED);
             }
-    }
+        }
         // fall through
     case IDCANCEL:
         EndDialog(*this, id);
