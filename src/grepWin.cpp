@@ -17,6 +17,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 #include "stdafx.h"
+#include "strsafe.h"
 #include "resource.h"
 #include "SearchDlg.h"
 #include "AboutDlg.h"
@@ -191,7 +192,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         if (PathIsRelative(iniPath.c_str()))
         {
             WCHAR absPath[MAX_PATH] = {L'\0'};
-            lstrcpynW(absPath, CPathUtils::GetModuleDir(0).c_str(), MAX_PATH);
+            StringCchCopy(absPath, MAX_PATH, CPathUtils::GetModuleDir(0).c_str());
             PathAppend(absPath, iniPath.c_str());
             iniPath = absPath;
         }

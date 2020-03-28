@@ -21,6 +21,7 @@
 #include "DlgResizer.h"
 #include "Registry.h"
 #include <string>
+#include <deque>
 
 
 /**
@@ -37,10 +38,10 @@ protected:
     LRESULT                 DoCommand(int id, int msg);
 
 private:
-    HWND                    m_hParent;
-    CRegStdString           m_regEditorCmd;
-    std::vector<std::wstring> m_langpaths;
-    CRegStdDWORD            m_regEsc;
+    HWND                      m_hParent;
+    CRegStdString             m_regEditorCmd;
+    std::deque<std::wstring>  m_langpaths;
+    CRegStdDWORD              m_regEsc;
 
-    CDlgResizer             m_resizer;
+    CDlgResizer               m_resizer;
 };

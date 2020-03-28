@@ -32,6 +32,7 @@
 
 #define MAX_STRING_LENGTH   (64*1024)
 
+inline bool PathIsExistingFile(LPCWSTR pszPath) { return (PathFileExists(pszPath) && !PathIsDirectory(pszPath)); }
 
 bool CLanguage::LoadFile( const std::wstring& path )
 {
@@ -41,14 +42,14 @@ bool CLanguage::LoadFile( const std::wstring& path )
     if (_wcsicmp(lastLangPath.c_str(), path.c_str()))
     {
         std::map<std::wstring, std::wstring> langmap2;
-        for (auto it = langmap.cbegin(); it != langmap.cend(); ++it)
+        for (const auto& item : langmap)
         {
-            langmap2[it->second] = it->first;
+            langmap2[item.second] = item.first;
         }
         langmap = langmap2;
     }
 
-    if (!PathFileExists(path.c_str()))
+    if (!PathIsExistingFile(path.c_str()))
         return false;
 
     lastLangPath = path;
@@ -88,51 +89,51 @@ bool CLanguage::LoadFile( const std::wstring& path )
             std::wstring msgid;
             std::wstring msgstr;
             int type = 0;
-            for (auto I = entry.begin(); I != entry.end(); ++I)
+            for (const auto& I : entry)
             {
-                if (wcsncmp(I->c_str(), L"# ", 2)==0)
+                if (wcsncmp(I.c_str(), L"# ", 2)==0)
                 {
                     //user comment
                     type = 0;
                 }
-                if (wcsncmp(I->c_str(), L"#.", 2)==0)
+                if (wcsncmp(I.c_str(), L"#.", 2)==0)
                 {
                     //automatic comments
                     type = 0;
                 }
-                if (wcsncmp(I->c_str(), L"#,", 2)==0)
+                if (wcsncmp(I.c_str(), L"#,", 2)==0)
                 {
                     //flag
                     type = 0;
                 }
-                if (wcsncmp(I->c_str(), L"msgid", 5)==0)
+                if (wcsncmp(I.c_str(), L"msgid", 5)==0)
                 {
                     //message id
-                    msgid = I->c_str();
+                    msgid = I.c_str();
                     msgid = std::wstring(msgid.substr(7, msgid.size() - 8));
 
                     std::wstring s = msgid;
                     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](wint_t c) {return !iswspace(c); }));
                     type = 1;
                 }
-                if (wcsncmp(I->c_str(), L"msgstr", 6)==0)
+                if (wcsncmp(I.c_str(), L"msgstr", 6)==0)
                 {
                     //message string
-                    msgstr = I->c_str();
+                    msgstr = I.c_str();
                     msgstr = msgstr.substr(8, msgstr.length() - 9);
                     type = 2;
                 }
-                if (wcsncmp(I->c_str(), L"\"", 1)==0)
+                if (wcsncmp(I.c_str(), L"\"", 1)==0)
                 {
                     if (type == 1)
                     {
-                        std::wstring temp = I->c_str();
+                        std::wstring temp = I.c_str();
                         temp = temp.substr(1, temp.length()-2);
                         msgid += temp;
                     }
                     if (type == 2)
                     {
-                        std::wstring temp = I->c_str();
+                        std::wstring temp = I.c_str();
                         temp = temp.substr(1, temp.length()-2);
                         msgstr += temp;
                     }
@@ -143,12 +144,13 @@ bool CLanguage::LoadFile( const std::wstring& path )
             SearchReplace(msgid, L"\\n", L"\n");
             SearchReplace(msgid, L"\\r", L"\r");
             SearchReplace(msgid, L"\\\\", L"\\");
+
             SearchReplace(msgstr, L"\\\"", L"\"");
             SearchReplace(msgstr, L"\\n", L"\n");
             SearchReplace(msgstr, L"\\r", L"\r");
             SearchReplace(msgstr, L"\\\\", L"\\");
-            if (!msgid.empty() && !msgstr.empty())
-                langmap[msgid] = msgstr;
+            if (!msgid.empty())
+                langmap[msgid] = !msgstr.empty() ? msgstr : msgid;
             msgid.clear();
             msgstr.clear();
         }

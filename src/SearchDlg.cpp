@@ -17,6 +17,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 #include "stdafx.h"
+#include "strsafe.h"
 #include "resource.h"
 #include "SearchDlg.h"
 #include "Registry.h"
@@ -1657,7 +1658,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                 std::wstring ssx = CStringUtils::Format(sx.c_str(), int(inf.matchlines.size() - 5));
                 matchString += ssx;
             }
-            lstrcpyn(pInfoTip->pszText, matchString.c_str(), pInfoTip->cchTextMax);
+            StringCchCopy(pInfoTip->pszText, pInfoTip->cchTextMax, matchString.c_str());
         }
     }
     if (lpNMItemActivate->hdr.code == LVN_GETDISPINFO)

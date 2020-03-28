@@ -17,6 +17,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 #include "stdafx.h"
+#include "strsafe.h"
 #include "resource.h"
 #include "maxpath.h"
 #include "Settings.h"
@@ -24,6 +25,7 @@
 #include "DirFileEnum.h"
 #include <Commdlg.h>
 
+inline bool PathIsExistingFile(LPCWSTR pszPath) { return (PathFileExists(pszPath) && !PathIsDirectory(pszPath)); }
 
 CSettingsDlg::CSettingsDlg(HWND hParent)
     : m_hParent(hParent)
@@ -36,6 +38,7 @@ CSettingsDlg::~CSettingsDlg(void)
 {
 }
 
+const wchar_t* const defaultLang  = L"English (United States) [en-US]";
 const wchar_t* const stdEditorCmd = _T(".\\Notepad3.exe /%mode% \"%pattern%\" /g %line% - %path%");
 
 LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -56,10 +59,11 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
             SetDlgItemText(hwndDlg, IDC_EDITORCMD, editorCmd.c_str());
 
-            wchar_t modulepath[MAX_PATH] = {0};
-            GetModuleFileName(NULL, modulepath, MAX_PATH);
-            PathRemoveFileSpec(modulepath);
-            std::wstring path = modulepath;
+            wchar_t moduledir[MAX_PATH] = {0};
+            GetModuleFileName(NULL, moduledir, MAX_PATH);
+            PathRemoveFileSpec(moduledir);
+
+            std::wstring path = moduledir;
             bool bRecurse = false;
             bool bIsDirectory = false;
             std::wstring sPath;
@@ -68,29 +72,36 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
             if (bPortable)
             {
-                const std::wstring& languagefile = g_iniFile.GetValue(L"global", L"languagefile", L"");
-
-                if (PathIsRelative(languagefile.c_str()))
+                wchar_t absLngPath[MAX_PATH] = {0};
+                StringCchCopy(absLngPath, MAX_PATH, g_iniFile.GetValue(L"global", L"languagefile", L""));
+                if (absLngPath[0] == L'\0')
                 {
-                    PathAppend(modulepath, languagefile.c_str());
-                    setLang = modulepath;
+                    StringCchCopy(absLngPath, MAX_PATH, defaultLang);
+                    StringCchCat(absLngPath, MAX_PATH, L".lang");
                 }
-                else
-                    setLang = languagefile;
-
+                if (PathIsRelative(absLngPath))
+                {
+                    wchar_t tmpPath[MAX_PATH] = {0};
+                    StringCchCopy(tmpPath, MAX_PATH, moduledir);
+                    PathAppend(tmpPath, absLngPath);
+                    StringCchCopy(absLngPath, MAX_PATH, tmpPath);
+                }
+                
                 // need to adapt file enumerator path
-                if (!languagefile.empty())
+                if (PathIsExistingFile(absLngPath))
                 {
-                    lstrcpyn(modulepath, setLang.c_str(), MAX_PATH);
-                    PathRemoveFileSpec(modulepath);
+                    StringCchCopy(moduledir, MAX_PATH, absLngPath);
+                    PathRemoveFileSpec(moduledir);
                 }
-                path = modulepath;
+                else 
+                    absLngPath[0] = L'\0'; // empty
+
+                setLang = absLngPath;
+                path    = moduledir;
             }
-
-            int index = 1;
-            int langIndex = 0;
-            SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)L"English (United States) [en-US]");
-
+            
+            int langIndex = -1;
+            int index = 0;
             CDirFileEnum fileEnumerator(path.c_str());
             while (fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse))
             {
@@ -109,8 +120,16 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
                 sPath = sPath.substr(slashpos+1);
                 dotpos = sPath.find_last_of('.');
                 sPath = sPath.substr(0, dotpos);
+
                 SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)sPath.c_str());
                 ++index;
+            }
+
+            if (langIndex < 0) // configured language file not found
+            {
+                langIndex = 0;
+                m_langpaths.push_front(L"");
+                SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)0, (LPARAM)defaultLang);
             }
 
             SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_SETCURSEL, langIndex, 0);
@@ -174,29 +193,34 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
             else
                 m_regEditorCmd = buf.get();
             int langIndex = (int)SendDlgItemMessage(*this, IDC_LANGUAGE, CB_GETCURSEL, 0, 0);
-            std::wstring langpath = langIndex==0 ? L"" : m_langpaths[langIndex-1];
+            std::wstring langpath  = (langIndex < m_langpaths.size()) ? m_langpaths[langIndex] : L"";
             if (bPortable)
             {
-                TCHAR wchLngPath[MAX_PATH] = {L'\0'};
-                GetModuleFileName(NULL, wchLngPath, MAX_PATH);
-                TCHAR wchAppPath[MAX_PATH] = {L'\0'};
-                PathCanonicalize(wchAppPath, wchLngPath);
-                if (PathRelativePathTo(wchLngPath, wchAppPath, FILE_ATTRIBUTE_NORMAL, langpath.c_str(), FILE_ATTRIBUTE_NORMAL))
-                    g_iniFile.SetValue(L"global", L"languagefile", wchLngPath);
+                WCHAR moduledir[MAX_PATH] = {L'\0'};
+                GetModuleFileName(NULL, moduledir, MAX_PATH);
+                PathRemoveFileSpec(moduledir);
+
+                WCHAR absLngPath[MAX_PATH] = {L'\0'};
+                StringCchCopy(absLngPath, MAX_PATH, langpath.c_str());
+                //~PathCanonicalize(tmp, absLngPath);
+                if (PathIsExistingFile(absLngPath))
+                {
+                    WCHAR relLngPath[MAX_PATH] = {L'\0'};
+                    if (PathRelativePathTo(relLngPath, moduledir, FILE_ATTRIBUTE_DIRECTORY, absLngPath, FILE_ATTRIBUTE_NORMAL))
+                        g_iniFile.SetValue(L"global", L"languagefile", relLngPath);
+                    else
+                        g_iniFile.SetValue(L"global", L"languagefile", absLngPath);
+                }
                 else
-                    g_iniFile.SetValue(L"global", L"languagefile", langpath.c_str());
+                    g_iniFile.DeleteValue(L"global", L"languagefile", NULL, false);
             }
             else
             {
                 CRegStdString regLang(L"Software\\grepWinNP3\\languagefile");
                 if (langIndex==0)
-                {
                     regLang.removeValue();
-                }
                 else
-                {
                     regLang = langpath;
-                }
             }
             CLanguage::Instance().LoadFile(langpath);
             CLanguage::Instance().TranslateWindow(::GetParent(*this));
