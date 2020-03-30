@@ -195,7 +195,7 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
                 g_iniFile.SetValue(L"global", L"editorcmd", buf.get());
             else
                 m_regEditorCmd = buf.get();
-            int langIndex = (int)SendDlgItemMessage(*this, IDC_LANGUAGE, CB_GETCURSEL, 0, 0);
+            size_t       langIndex = (size_t)SendDlgItemMessage(*this, IDC_LANGUAGE, CB_GETCURSEL, 0, 0);
             std::wstring langpath  = (langIndex < m_langpaths.size()) ? m_langpaths[langIndex] : L"";
             if (bPortable)
             {

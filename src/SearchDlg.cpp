@@ -1730,7 +1730,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
         else
         {
             auto tup = m_listItems[iItem];
-            auto index = std::get<0>(tup);
+            auto index    = std::get<0>(tup);
             auto subIndex = std::get<1>(tup);
 
             const auto& item = m_items[index];
@@ -1775,7 +1775,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                     case 2: // line
                     {
                         std::wstring line;
-                        if (pInfo->matchlines.size() > subIndex)
+                        if (pInfo->matchlines.size() > static_cast<size_t>(subIndex))
                             line = pInfo->matchlines[subIndex];
                         std::replace(line.begin(), line.end(), '\t', ' ');
                         std::replace(line.begin(), line.end(), '\n', ' ');
