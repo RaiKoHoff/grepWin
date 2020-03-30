@@ -1805,7 +1805,6 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
 static void EscCtrlCharacters(std::wstring& pattern)
 {
     std::wstring            result;
-    std::wstring::size_type pos = 0;
     for (const wchar_t& ch : pattern)
     {
         switch (ch)
