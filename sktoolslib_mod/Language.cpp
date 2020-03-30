@@ -149,8 +149,8 @@ bool CLanguage::LoadFile( const std::wstring& path )
             SearchReplace(msgstr, L"\\n", L"\n");
             SearchReplace(msgstr, L"\\r", L"\r");
             SearchReplace(msgstr, L"\\\\", L"\\");
-            if (!msgid.empty())
-                langmap[msgid] = !msgstr.empty() ? msgstr : msgid;
+            if (!msgid.empty() && !msgstr.empty())
+                langmap[msgid] = msgstr;
             msgid.clear();
             msgstr.clear();
         }

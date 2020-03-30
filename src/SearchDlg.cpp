@@ -1801,6 +1801,57 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
     }
 }
 
+
+static void EscCtrlCharacters(std::wstring& pattern)
+{
+    std::wstring            result;
+    std::wstring::size_type pos = 0;
+    for (const wchar_t& ch : pattern)
+    {
+        switch (ch)
+        {
+            case L'\\':
+                result.append(L"\\\\");
+                break;
+            case L'\n':
+                result.append(L"\\n");
+                break;
+            case L'\r':
+                result.append(L"\\r");
+                break;
+            case L'\t':
+                result.append(L"\\t");
+                break;
+            case L'\f':
+                result.append(L"\\f");
+                break;
+            case L'\v':
+                result.append(L"\\v");
+                break;
+            case L'\a':
+                result.append(L"\\a");
+                break;
+            case L'\b':
+                result.append(L"\\b");
+                break;
+            case L'\x1B':
+                result.append(L"\\e");
+                break;
+            // protect quotes too
+            case L'"':
+                result.append(L"\\\"");
+                break;
+            default:
+                result.push_back(ch);
+                break;
+        }
+        if (ch == L'\0')
+            break; // loop
+    }
+    pattern = std::move(result);
+}
+
+
 void CSearchDlg::OpenFileAtListIndex(int listIndex)
 {
     int iItem = GetSelectedListIndex(listIndex);
@@ -1828,9 +1879,7 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
             lv.pszText = textlinebuf;
             lv.cchTextMax = _countof(textlinebuf);
             if (ListView_GetItem(hListControl, &lv))
-            {
                 SearchReplace(cmd, L"%line%", textlinebuf);
-            }
         }
         else
         {
@@ -1844,9 +1893,17 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
         SearchReplace(cmd, L"%path%", inf.filepath.c_str());
 
         // Notepad3 special
-        SearchReplace(cmd, L"%mode%", m_bUseRegex ? L"mr" : L"m");
+        std::wstring mode = L"mb";
+        if (m_bUseRegex)
+            mode.append(L"r");
+        if (m_bCaseSensitive)
+            mode.append(L"c");
+        if (m_bDotMatchesNewline)
+            mode.append(L"a");
+        SearchReplace(cmd, L"%mode%", mode.c_str());
+
         std::wstring searchfor = m_searchString;
-        SearchReplace(searchfor, _T("\""), _T("\\\""));
+        EscCtrlCharacters(searchfor);
         SearchReplace(cmd, L"%pattern%", searchfor.c_str());
 
         STARTUPINFO startupInfo;
@@ -1854,7 +1911,7 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
         SecureZeroMemory(&startupInfo, sizeof(startupInfo));
         startupInfo.cb = sizeof(STARTUPINFO);
         SecureZeroMemory(&processInfo, sizeof(processInfo));
-        CreateProcess(NULL, const_cast<TCHAR*>(cmd.c_str()), NULL, NULL, FALSE, 0, 0, NULL, &startupInfo, &processInfo);
+        CreateProcess(NULL, const_cast<TCHAR*>(cmd.c_str()), NULL, NULL, FALSE, CREATE_NEW_PROCESS_GROUP, 0, NULL, &startupInfo, &processInfo);
         CloseHandle(processInfo.hThread);
         CloseHandle(processInfo.hProcess);
         return;
