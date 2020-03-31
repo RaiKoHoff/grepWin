@@ -66,7 +66,6 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             std::wstring path = moduledir;
             bool bRecurse = false;
             bool bIsDirectory = false;
-            std::wstring sPath;
             CRegStdString regLang(L"Software\\grepWinNP3\\languagefile");
             std::wstring  setLang = regLang;
 
@@ -100,27 +99,61 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
                 path    = moduledir;
             }
             
-            int langIndex = -1;
-            int index = 0;
-            CDirFileEnum fileEnumerator(path.c_str());
+            // ordered map of language files
+            std::wstring                         sPath;
+            std::map<std::wstring, std::wstring> langFileMap;
+            CDirFileEnum                         fileEnumerator(path.c_str());
             while (fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse))
             {
-                size_t dotpos = sPath.find_last_of('.');
+                size_t const dotpos = sPath.find_last_of('.');
                 if (dotpos == std::wstring::npos)
                     continue;
-                std::wstring ext = sPath.substr(dotpos);
+                std::wstring const ext = sPath.substr(dotpos);
                 if (ext.compare(L".lang"))
                     continue;
-                m_langpaths.push_back(sPath);
-                if (sPath.compare(setLang)==0)
-                    langIndex = index;
-                size_t slashpos = sPath.find_last_of('\\');
+                size_t const keypos = max(0, dotpos - 7);
+                std::wstring const lngKey = sPath.substr(keypos, (dotpos - keypos - 1));
+                langFileMap.insert({ lngKey, sPath });
+            }
+
+            // clean map and get [en-US] first ...
+            int langIndex = -1;
+            for (auto it = langFileMap.cbegin();  it != langFileMap.cend() /* not hoisted */; /* no increment */)
+            {
+                size_t const slashpos = (it->second).find_last_of('\\');
+                if (slashpos == std::wstring::npos)
+                    it = langFileMap.erase(it);
+                else
+                {
+                    sPath               = (it->second).substr(slashpos + 1);
+                    size_t const dotpos = sPath.find_last_of('.');
+                    sPath               = sPath.substr(0, dotpos);
+                    if (sPath.compare(defaultLang) == 0)
+                    {
+                        if ((it->second).compare(setLang) == 0)
+                          langIndex = 0;
+                        m_langpaths.push_front(it->second);
+                        SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)sPath.c_str());
+                        it = langFileMap.erase(it);
+                    }
+                    else
+                        ++it;
+                }
+            }
+
+            // build combobox
+            int index = static_cast<int>(m_langpaths.size());
+            for (const auto& lang : langFileMap)
+            {
+                size_t const slashpos = lang.second.find_last_of('\\');
                 if (slashpos == std::wstring::npos)
                     continue;
-                sPath = sPath.substr(slashpos+1);
-                dotpos = sPath.find_last_of('.');
-                sPath = sPath.substr(0, dotpos);
-
+                if ((langIndex < 0) && (lang.second.compare(setLang) == 0))
+                    langIndex = index;
+                sPath               = lang.second.substr(slashpos + 1);
+                size_t const dotpos = sPath.find_last_of('.');
+                sPath  = sPath.substr(0, dotpos);
+                m_langpaths.push_back(lang.second);
                 SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)-1, (LPARAM)sPath.c_str());
                 ++index;
             }
