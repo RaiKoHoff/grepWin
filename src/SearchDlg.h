@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2019 - Stefan Kueng
+// Copyright (C) 2007-2020 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -159,6 +159,7 @@ private:
     static bool             PathCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
     static bool             EncodingCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
     static bool             ModifiedTimeCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
+    static bool             ExtCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
 
     static bool             NameCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
     static bool             SizeCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
@@ -166,6 +167,7 @@ private:
     static bool             PathCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
     static bool             EncodingCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
     static bool             ModifiedTimeCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
+    static bool             ExtCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
 
 private:
     HWND                    m_hParent;
@@ -224,6 +226,7 @@ private:
 
     CDlgResizer             m_resizer;
     CHyperLink              m_link;
+    int                     m_themeCallbackId;
 
     CFileDropTarget *       m_pDropTarget;
 

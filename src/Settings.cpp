@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2012-2013, 2016-2019 - Stefan Kueng
+// Copyright (C) 2012-2013, 2016-2020 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -23,6 +23,8 @@
 #include "Settings.h"
 #include "BrowseFolder.h"
 #include "DirFileEnum.h"
+#include "Theme.h"
+#include "DarkModeHelper.h"
 #include <Commdlg.h>
 
 inline bool PathIsExistingFile(LPCWSTR pszPath) { return (PathFileExists(pszPath) && !PathIsDirectory(pszPath)); }
@@ -31,6 +33,7 @@ CSettingsDlg::CSettingsDlg(HWND hParent)
     : m_hParent(hParent)
     , m_regEditorCmd(_T("Software\\grepWinNP3\\editorcmd"))
     , m_regEsc(_T("Software\\grepWinNP3\\escclose"), FALSE)
+    , m_themeCallbackId(0)
 {
 }
 
@@ -48,7 +51,14 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
     {
     case WM_INITDIALOG:
         {
+            m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback(
+                [this]() {
+                    CTheme::Instance().SetThemeForDialog(*this, CTheme::Instance().IsDarkTheme());
+                });
+            CTheme::Instance().SetThemeForDialog(*this, CTheme::Instance().IsDarkTheme());
             InitDialog(hwndDlg, IDI_GREPWIN);
+            DarkModeHelper::Instance().AllowDarkModeForWindow(GetToolTipHWND(), CTheme::Instance().IsDarkTheme());
+            SetWindowTheme(GetToolTipHWND(), L"Explorer", nullptr);
 
             CLanguage::Instance().TranslateWindow(*this);
             AddToolTip(IDC_ONLYONE, TranslatedString(hResource, IDS_ONLYONE_TT).c_str());
@@ -172,12 +182,13 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             SendDlgItemMessage(hwndDlg, IDC_ESCKEY, BM_SETCHECK, bPortable ? g_iniFile.GetBoolValue(L"settings", L"escclose", false) : !!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
             SendDlgItemMessage(hwndDlg, IDC_BACKUPINFOLDER, BM_SETCHECK, bPortable ? g_iniFile.GetBoolValue(L"settings", L"backupinfolder", false) : !!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\backupinfolder", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
             SendDlgItemMessage(hwndDlg, IDC_ONLYONE, BM_SETCHECK, bPortable ? g_iniFile.GetBoolValue(L"global", L"onlyone", false) : !!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\onlyone", FALSE)) ? BST_CHECKED : BST_UNCHECKED, 0);
+            SendDlgItemMessage(hwndDlg, IDC_DARKMODE, BM_SETCHECK, CTheme::Instance().IsDarkTheme() ? BST_CHECKED : BST_UNCHECKED, 0);
 
             AddToolTip(IDC_BACKUPINFOLDER, TranslatedString(hResource, IDS_BACKUPINFOLDER_TT).c_str());
 
             m_resizer.Init(hwndDlg);
+            m_resizer.UseSizeGrip(!CTheme::Instance().IsDarkTheme());
             m_resizer.AddControl(hwndDlg, IDC_EDITORGROUP, RESIZER_TOPLEFTRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_RESETDEFAULT, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_EDITORCMD, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_SEARCHPATHBROWSE, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_STATIC1, RESIZER_TOPLEFTRIGHT);
@@ -188,7 +199,7 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             m_resizer.AddControl(hwndDlg, IDC_ESCKEY, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_BACKUPINFOLDER, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_ONLYONE, RESIZER_TOPLEFTRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_DWM, RESIZER_BOTTOMLEFT);
+            m_resizer.AddControl(hwndDlg, IDC_DARKMODE, RESIZER_BOTTOMLEFT);
             m_resizer.AddControl(hwndDlg, IDOK, RESIZER_BOTTOMRIGHT);
             m_resizer.AddControl(hwndDlg, IDCANCEL, RESIZER_BOTTOMRIGHT);
         }
@@ -208,6 +219,9 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             return 0;
         }
         break;
+        case WM_CLOSE:
+            CTheme::Instance().RemoveRegisteredCallback(m_themeCallbackId);
+            break;
     default:
         return FALSE;
     }
@@ -276,9 +290,11 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
                 CRegStdDWORD regOnlyOne(L"Software\\grepWinNP3\\onlyone", FALSE);
                 regOnlyOne = (IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED);
             }
+            CTheme::Instance().SetDarkTheme(IsDlgButtonChecked(*this, IDC_DARKMODE) == BST_CHECKED);
         }
         // fall through
     case IDCANCEL:
+        CTheme::Instance().RemoveRegisteredCallback(m_themeCallbackId);
         EndDialog(*this, id);
         break;
     case IDC_SEARCHPATHBROWSE:
@@ -311,4 +327,3 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
     }
     return 1;
 }
-

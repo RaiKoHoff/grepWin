@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2012-2013, 2019 - Stefan Kueng
+// Copyright (C) 2012-2013, 2019-2020 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -42,6 +42,6 @@ private:
     CRegStdString             m_regEditorCmd;
     std::deque<std::wstring>  m_langpaths;
     CRegStdDWORD              m_regEsc;
-
+    int                       m_themeCallbackId;
     CDlgResizer               m_resizer;
 };

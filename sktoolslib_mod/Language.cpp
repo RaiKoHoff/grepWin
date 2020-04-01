@@ -144,7 +144,6 @@ bool CLanguage::LoadFile( const std::wstring& path )
             SearchReplace(msgid, L"\\n", L"\n");
             SearchReplace(msgid, L"\\r", L"\r");
             SearchReplace(msgid, L"\\\\", L"\\");
-
             SearchReplace(msgstr, L"\\\"", L"\"");
             SearchReplace(msgstr, L"\\n", L"\n");
             SearchReplace(msgstr, L"\\r", L"\r");

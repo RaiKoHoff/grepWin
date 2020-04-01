@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2010, 2012-2017, 2019 - Stefan Kueng
+// Copyright (C) 2007-2010, 2012-2017, 2019-2020 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -21,13 +21,13 @@
 #include "maxpath.h"
 #include "BookmarksDlg.h"
 #include "NameDlg.h"
+#include "Theme.h"
 #include <string>
 
 #pragma warning(push)
 #pragma warning(disable: 4996) // warning STL4010: Various members of std::allocator are deprecated in C++17
 #include <boost/regex.hpp>
 #pragma warning(pop)
-
 
 CBookmarksDlg::CBookmarksDlg(HWND hParent)
     : m_hParent(hParent)
@@ -41,6 +41,7 @@ CBookmarksDlg::CBookmarksDlg(HWND hParent)
     , m_bIncludeHidden(false)
     , m_bIncludeBinary(false)
     , m_bFileMatchRegex(false)
+    , m_themeCallbackId(0)
 {
 }
 
@@ -55,12 +56,18 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
     {
     case WM_INITDIALOG:
         {
+            m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback(
+                [this]() {
+                    CTheme::Instance().SetThemeForDialog(*this, CTheme::Instance().IsDarkTheme());
+                });
+            CTheme::Instance().SetThemeForDialog(*this, CTheme::Instance().IsDarkTheme());
             InitDialog(hwndDlg, IDI_GREPWIN);
             CLanguage::Instance().TranslateWindow(*this);
             // initialize the controls
             InitBookmarks();
 
             m_resizer.Init(hwndDlg);
+            m_resizer.UseSizeGrip(!CTheme::Instance().IsDarkTheme());
             m_resizer.AddControl(hwndDlg, IDC_INFOLABEL, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_BOOKMARKS, RESIZER_TOPLEFTBOTTOMRIGHT);
             m_resizer.AddControl(hwndDlg, IDOK, RESIZER_BOTTOMRIGHT);
@@ -132,6 +139,9 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
             }
         }
         break;
+        case WM_CLOSE:
+            CTheme::Instance().RemoveRegisteredCallback(m_themeCallbackId);
+            break;
     default:
         return FALSE;
     }
@@ -236,7 +246,6 @@ void CBookmarksDlg::InitBookmarks()
     ListView_InsertColumn(hListControl, 1, &lvc);
     lvc.pszText = const_cast<LPWSTR>((LPCWSTR)sReplaceString.c_str());
     ListView_InsertColumn(hListControl, 2, &lvc);
-
 
     m_bookmarks.Load();
     CSimpleIni::TNamesDepend sections;

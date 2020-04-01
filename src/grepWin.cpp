@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2008, 2010-2019 - Stefan Kueng
+// Copyright (C) 2007-2008, 2010-2020 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -26,6 +26,10 @@
 #include "Language.h"
 #include "StringUtils.h"
 #include "PathUtils.h"
+#pragma warning(push)
+#pragma warning(disable : 4458) // declaration of 'xxx' hides class member
+#include <gdiplus.h>
+#pragma warning(pop)
 
 // Global Variables:
 HINSTANCE g_hInst;            // current instance
@@ -145,9 +149,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     // we need some of the common controls
     INITCOMMONCONTROLSEX icex;
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    icex.dwICC = ICC_LINK_CLASS|ICC_LISTVIEW_CLASSES|ICC_PAGESCROLLER_CLASS
-        |ICC_PROGRESS_CLASS|ICC_STANDARD_CLASSES|ICC_TAB_CLASSES|ICC_TREEVIEW_CLASSES
-        |ICC_UPDOWN_CLASS|ICC_USEREX_CLASSES|ICC_WIN95_CLASSES;
+    icex.dwICC  = ICC_LINK_CLASS | ICC_LISTVIEW_CLASSES | ICC_PAGESCROLLER_CLASS | ICC_PROGRESS_CLASS | ICC_STANDARD_CLASSES | ICC_TAB_CLASSES | ICC_TREEVIEW_CLASSES | ICC_UPDOWN_CLASS | ICC_USEREX_CLASSES | ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icex);
 
     HMODULE hRichEdt = LoadLibrary(_T("Riched20.dll"));
@@ -234,6 +236,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     int ret = 0;
     if (!bQuit)
     {
+        Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+        ULONG_PTR                    gdiplusToken;
+        // Initialize GDI+.
+        Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
         if (bPortable)
         {
             std::wstring languagefile = g_iniFile.GetValue(L"global", L"languagefile", L"");
@@ -347,6 +354,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
         if (bPortable)
             g_iniFile.SaveFile(iniPath.c_str(), true);
+        
+        Gdiplus::GdiplusShutdown(gdiplusToken);
     }
 
     ::CoUninitialize();
