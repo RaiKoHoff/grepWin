@@ -34,7 +34,7 @@ CSettingsDlg::CSettingsDlg(HWND hParent)
 {
 }
 
-CSettingsDlg::~CSettingsDlg(void)
+CSettingsDlg::~CSettingsDlg()
 {
 }
 
@@ -60,7 +60,7 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             SetDlgItemText(hwndDlg, IDC_EDITORCMD, editorCmd.c_str());
 
             wchar_t moduledir[MAX_PATH] = {0};
-            GetModuleFileName(NULL, moduledir, MAX_PATH);
+            GetModuleFileName(nullptr, moduledir, MAX_PATH);
             PathRemoveFileSpec(moduledir);
 
             std::wstring path = moduledir;
@@ -142,7 +142,7 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             }
 
             // build combobox
-            int index = static_cast<int>(m_langpaths.size());
+            auto index = static_cast<int>(m_langpaths.size());
             for (const auto& lang : langFileMap)
             {
                 size_t const slashpos = lang.second.find_last_of('\\');
@@ -165,7 +165,7 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
                 SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_INSERTSTRING, (WPARAM)0, (LPARAM)defaultLang);
             }
 
-            int const height = (int)SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_GETITEMHEIGHT, 0, NULL);
+            auto const height = (int)SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_GETITEMHEIGHT, 0, NULL);
             SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_SETITEMHEIGHT, 0, (LPARAM)((int)(height*132)/100));
 
             SendDlgItemMessage(hwndDlg, IDC_LANGUAGE, CB_SETCURSEL, langIndex, 0);
@@ -202,7 +202,7 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
         break;
     case WM_GETMINMAXINFO:
         {
-            MINMAXINFO * mmi = (MINMAXINFO*)lParam;
+            auto * mmi = (MINMAXINFO*)lParam;
             mmi->ptMinTrackSize.x = m_resizer.GetDlgRectScreen()->right;
             mmi->ptMinTrackSize.y = m_resizer.GetDlgRectScreen()->bottom;
             return 0;
@@ -228,12 +228,12 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
                 g_iniFile.SetValue(L"global", L"editorcmd", buf.get());
             else
                 m_regEditorCmd = buf.get();
-            size_t       langIndex = (size_t)SendDlgItemMessage(*this, IDC_LANGUAGE, CB_GETCURSEL, 0, 0);
-            std::wstring langpath  = (langIndex < m_langpaths.size()) ? m_langpaths[langIndex] : L"";
+            auto               langIndex = static_cast<size_t>(SendDlgItemMessage(*this, IDC_LANGUAGE, CB_GETCURSEL, 0, 0));
+            const std::wstring langpath  = (langIndex < m_langpaths.size()) ? m_langpaths[langIndex] : L"";
             if (bPortable)
             {
                 WCHAR moduledir[MAX_PATH] = {L'\0'};
-                GetModuleFileName(NULL, moduledir, MAX_PATH);
+                GetModuleFileName(nullptr, moduledir, MAX_PATH);
                 PathRemoveFileSpec(moduledir);
 
                 WCHAR absLngPath[MAX_PATH] = {L'\0'};
@@ -248,7 +248,7 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
                         g_iniFile.SetValue(L"global", L"languagefile", absLngPath);
                 }
                 else
-                    g_iniFile.DeleteValue(L"global", L"languagefile", NULL, false);
+                    g_iniFile.DeleteValue(L"global", L"languagefile", nullptr, false);
             }
             else
             {

@@ -64,25 +64,25 @@ static void RegisterContextMenu(bool bAdd)
     {
         std::wstring sIconPath = CStringUtils::Format(L"%s,-%d", CPathUtils::GetLongPathname(CPathUtils::GetModulePath()).c_str(), IDI_GREPWIN);
         std::wstring sExePath = CStringUtils::Format(L"%s /searchpath:\"%%1\"", CPathUtils::GetLongPathname(CPathUtils::GetModulePath()).c_str());
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\grepWinNP3", NULL, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\grepWinNP3", nullptr, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
         SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\grepWinNP3", L"Icon", REG_SZ, sIconPath.c_str(), DWORD((sIconPath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\grepWinNP3\\Command", NULL, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\Background\\shell\\grepWinNP3", NULL, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\grepWinNP3\\Command", nullptr, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\Background\\shell\\grepWinNP3", nullptr, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
         SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\Background\\shell\\grepWinNP3", L"Icon", REG_SZ, sIconPath.c_str(), DWORD((sIconPath.size() + 1) * sizeof(WCHAR)));
 
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Folder\\shell\\grepWinNP3", NULL, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Folder\\shell\\grepWinNP3", nullptr, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
         SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Folder\\shell\\grepWinNP3", L"Icon", REG_SZ, sIconPath.c_str(), DWORD((sIconPath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Folder\\shell\\grepWinNP3\\Command", NULL, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Drive\\shell\\grepWinNP3", NULL, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Folder\\shell\\grepWinNP3\\Command", nullptr, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Drive\\shell\\grepWinNP3", nullptr, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
         SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Drive\\shell\\grepWinNP3", L"Icon", REG_SZ, sIconPath.c_str(), DWORD((sIconPath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Drive\\shell\\grepWinNP3\\Command", NULL, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\*\\shell\\grepWinNP3", NULL, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Drive\\shell\\grepWinNP3\\Command", nullptr, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\*\\shell\\grepWinNP3", nullptr, REG_SZ, L"search with grepWinNP3", sizeof(L"search with grepWinNP3") + 2);
         SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\*\\shell\\grepWinNP3", L"Icon", REG_SZ, sIconPath.c_str(), DWORD((sIconPath.size() + 1) * sizeof(WCHAR)));
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\*\\shell\\grepWinNP3\\Command", NULL, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\*\\shell\\grepWinNP3\\Command", nullptr, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
         SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\*\\shell\\grepWinNP3", L"MultiSelectModel", REG_SZ, L"Player", sizeof(L"Player") + 2);
 
         sExePath = CStringUtils::Format(L"%s /searchpath:\"%%V\"", CPathUtils::GetLongPathname(CPathUtils::GetModulePath()).c_str());
-        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\Background\\shell\\grepWinNP3\\Command", NULL, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
+        SHSetValue(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\Background\\shell\\grepWinNP3\\Command", nullptr, REG_SZ, sExePath.c_str(), DWORD((sExePath.size() + 1) * sizeof(WCHAR)));
     }
     else
     {
@@ -96,7 +96,7 @@ static void RegisterContextMenu(bool bAdd)
 
 BOOL CALLBACK windowenumerator(__in  HWND hwnd,__in  LPARAM lParam)
 {
-    HWND * pWnd = (HWND*)lParam;
+    auto * pWnd = (HWND*)lParam;
     WCHAR buf[MAX_PATH] = {0};
     GetWindowText(hwnd, buf, _countof(buf));
     if (_wcsnicmp(buf, L"grepwinnp3 :", 12) == 0)
@@ -131,7 +131,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     // if multiple items are selected in explorer and grepWin is started for all of them,
     // explorer starts multiple grepWin instances at once. In case there's already a grepWin instance
     // running, sleep for a while to give that instance time to fully initialize
-    HANDLE hReloadProtection = ::CreateMutex(NULL, FALSE, L"{6473AA76-0EAE-4C96-8C99-AFDFEFFE42B5}");
+    HANDLE hReloadProtection = ::CreateMutex(nullptr, FALSE, L"{6473AA76-0EAE-4C96-8C99-AFDFEFFE42B5}");
     bool alreadyRunning = false;
     if ((!hReloadProtection) || (GetLastError() == ERROR_ALREADY_EXISTS))
     {
@@ -140,8 +140,8 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     }
 
     g_hInst = hInstance;
-    ::OleInitialize(NULL);
-    ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    ::OleInitialize(nullptr);
+    ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     // we need some of the common controls
     INITCOMMONCONTROLSEX icex;
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
@@ -166,22 +166,22 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     }
 
     bool bQuit = false;
-    HWND hWnd = NULL;
+    HWND hWnd = nullptr;
     int timeout = 20;
     do
     {
         EnumWindows(windowenumerator, (LPARAM)&hWnd);
-        if (alreadyRunning && (hWnd == NULL))
+        if (alreadyRunning && (hWnd == nullptr))
             Sleep(100);
         timeout--;
-    } while ((hWnd == NULL) && alreadyRunning && timeout);
+    } while ((hWnd == nullptr) && alreadyRunning && timeout);
 
-    auto modulename = CPathUtils::GetFileName(CPathUtils::GetModulePath(0));
+    auto modulename = CPathUtils::GetFileName(CPathUtils::GetModulePath(nullptr));
     bPortable       = ((_tcsstr(modulename.c_str(), _T("portable"))) || 
                        (_tcsstr(modulename.c_str(), _T("NP3"))) || 
                        (parser.HasKey(_T("portable"))));
 
-    std::wstring iniPath = CPathUtils::GetModuleDir(0);
+    std::wstring iniPath = CPathUtils::GetModuleDir(nullptr);
     iniPath += L"\\grepWinNP3.ini";
 
     if (parser.HasVal(L"inipath"))
@@ -192,7 +192,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         if (PathIsRelative(iniPath.c_str()))
         {
             WCHAR absPath[MAX_PATH] = {L'\0'};
-            StringCchCopy(absPath, MAX_PATH, CPathUtils::GetModuleDir(0).c_str());
+            StringCchCopy(absPath, MAX_PATH, CPathUtils::GetModuleDir(nullptr).c_str());
             PathAppend(absPath, iniPath.c_str());
             iniPath = absPath;
         }
@@ -240,7 +240,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
             if (PathIsRelative(languagefile.c_str()))
             {
                 TCHAR wchAppPath[MAX_PATH] = {L'\0'};
-                GetModuleFileName(NULL, wchAppPath, MAX_PATH);
+                GetModuleFileName(nullptr, wchAppPath, MAX_PATH);
                 PathRemoveFileSpec(wchAppPath);
                 PathAppend(wchAppPath, languagefile.c_str());
                 TCHAR wchLngPath[MAX_PATH] = {L'\0'};
@@ -255,12 +255,12 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
         if (parser.HasKey(_T("about"))||parser.HasKey(_T("?"))||parser.HasKey(_T("help")))
         {
-            CAboutDlg aboutDlg(NULL);
-            ret= (int)aboutDlg.DoModal(hInstance, IDD_ABOUT, NULL, NULL);
+            CAboutDlg aboutDlg(nullptr);
+            ret= (int)aboutDlg.DoModal(hInstance, IDD_ABOUT, nullptr, NULL);
         }
         else
         {
-            CSearchDlg   searchDlg(NULL);
+            CSearchDlg   searchDlg(nullptr);
 
             std::wstring spath = parser.HasVal(L"searchpath") ? parser.GetVal(_T("searchpath")) : 
               (bPortable ? g_iniFile.GetValue(L"global", L"searchpath", L"") : L"");
@@ -342,7 +342,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 }
                 searchDlg.SetDateLimit(parser.GetLongVal(L"datelimit"), date1, date2);
             }
-            ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, NULL, IDR_SEARCHDLG);
+            ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, nullptr, IDR_SEARCHDLG);
         }
 
         if (bPortable)

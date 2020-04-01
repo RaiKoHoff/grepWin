@@ -19,7 +19,7 @@
 #include "stdafx.h"
 #include "SearchInfo.h"
 
-CSearchInfo::CSearchInfo(void)
+CSearchInfo::CSearchInfo()
     : filesize(0)
     , readerror(false)
     , folder(false)
@@ -44,6 +44,6 @@ CSearchInfo::CSearchInfo(const std::wstring& path)
     modifiedtime.dwLowDateTime  = 0;
 }
 
-CSearchInfo::~CSearchInfo(void)
+CSearchInfo::~CSearchInfo()
 {
 }
