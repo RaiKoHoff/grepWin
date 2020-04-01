@@ -1816,9 +1816,6 @@ static void EscCtrlCharacters(std::wstring& pattern)
     {
         switch (ch)
         {
-            case L'\\':
-                result.append(L"\\\\");
-                break;
             case L'\n':
                 result.append(L"\\n");
                 break;
