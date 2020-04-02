@@ -463,9 +463,9 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_resizer.AddControl(hwndDlg, IDOK, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_GROUPSEARCHRESULTS, RESIZER_TOPLEFTBOTTOMRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_RESULTLIST, RESIZER_TOPLEFTBOTTOMRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_RESULTFILES, RESIZER_BOTTOMRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_RESULTCONTENT, RESIZER_BOTTOMRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_SEARCHINFOLABEL, RESIZER_BOTTOMLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_RESULTFILES, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_RESULTCONTENT, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_SEARCHINFOLABEL, RESIZER_TOPLEFTRIGHT);
 
             InitDialog(hwndDlg, IDI_GREPWIN);
 
@@ -1717,21 +1717,21 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
             {
                 switch (pItem->iSubItem)
                 {
-                case 0: // name of the file
-                    wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(pInfo->filepath.find_last_of('\\') + 1).c_str(), pItem->cchTextMax - 1);
-                    break;
-                case 1: // file size
-                    if (!pInfo->folder)
-                        StrFormatByteSizeW(pInfo->filesize, pItem->pszText, pItem->cchTextMax);
-                    break;
-                case 2: // match count or read error
-                    if (pInfo->readerror)
-                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, TranslatedString(hResource, IDS_READERROR).c_str(), pItem->cchTextMax - 1);
-                    else
-                        swprintf_s(pItem->pszText, pItem->cchTextMax, L"%lld", pInfo->matchcount);
-                    break;
-                case 3: // path
-                    wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(0, pInfo->filepath.size() - pInfo->filepath.substr(pInfo->filepath.find_last_of('\\') + 1).size() - 1).c_str(), pItem->cchTextMax - 1);
+                    case 0: // name of the file
+                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(pInfo->filepath.find_last_of('\\') + 1).c_str(), pItem->cchTextMax - 1);
+                        break;
+                    case 1: // file size
+                        if (!pInfo->folder)
+                            StrFormatByteSizeW(pInfo->filesize, pItem->pszText, pItem->cchTextMax);
+                        break;
+                    case 2: // match count or read error
+                        if (pInfo->readerror)
+                            wcsncpy_s(pItem->pszText, pItem->cchTextMax, TranslatedString(hResource, IDS_READERROR).c_str(), pItem->cchTextMax - 1);
+                        else
+                            swprintf_s(pItem->pszText, pItem->cchTextMax, L"%lld", pInfo->matchcount);
+                        break;
+                    case 3: // path
+                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(0, pInfo->filepath.size() - pInfo->filepath.substr(pInfo->filepath.find_last_of('\\') + 1).size() - 1).c_str(), pItem->cchTextMax - 1);
                         break;
                     case 4: // extension of the file
                     {
@@ -1739,38 +1739,38 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                         if (dotpos != std::wstring::npos)
                             wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(dotpos + 1).c_str(), pItem->cchTextMax - 1);
                         else
-                            pItem->pszText[0] = 0;
+                            pItem->pszText[0] = L'\0';
                     }
                     break;
                     case 5: // encoding
-                    switch (pInfo->encoding)
-                    {
-                    case CTextFile::ANSI:
-                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"ANSI", pItem->cchTextMax - 1);
-                        break;
-                    case CTextFile::UNICODE_LE:
+                        switch (pInfo->encoding)
+                        {
+                            case CTextFile::ANSI:
+                                wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"ANSI", pItem->cchTextMax - 1);
+                                break;
+                            case CTextFile::UNICODE_LE:
                                 wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"UTF-16-LE", pItem->cchTextMax - 1);
-                        break;
+                                break;
                             case CTextFile::UNICODE_BE:
                                 wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"UTF-16-BE", pItem->cchTextMax - 1);
                                 break;
-                    case CTextFile::UTF8:
-                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"UTF8", pItem->cchTextMax - 1);
+                            case CTextFile::UTF8:
+                                wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"UTF8", pItem->cchTextMax - 1);
+                                break;
+                            case CTextFile::BINARY:
+                                wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"BINARY", pItem->cchTextMax - 1);
+                                break;
+                            default:
+                                wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"", pItem->cchTextMax - 1);
+                                break;
+                        }
                         break;
-                    case CTextFile::BINARY:
-                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"BINARY", pItem->cchTextMax - 1);
+                    case 6: // modification date
+                        formatDate(pItem->pszText, pInfo->modifiedtime, true);
                         break;
                     default:
-                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, L"", pItem->cchTextMax - 1);
+                        pItem->pszText[0] = 0;
                         break;
-                    }
-                    break;
-                    case 6: // modification date
-                    formatDate(pItem->pszText, pInfo->modifiedtime, true);
-                    break;
-                default:
-                    pItem->pszText[0] = 0;
-                    break;
                 }
             }
             if (pItem->mask & LVIF_IMAGE)
@@ -2592,7 +2592,6 @@ DWORD CSearchDlg::SearchThread()
 
                             futureMap.insert(std::make_pair(SinfoPtr, foundFuture));
                         }
-                        //skipped = SinfoPtr->skipped;
                     }
                     else
                     {
@@ -2666,26 +2665,25 @@ DWORD CSearchDlg::SearchThread()
             {
                 for (auto it = futureMap.cbegin(); it != futureMap.cend() /* not hoisted */; /* no increment */)
                 {
-                    status = (it->second).wait_for(std::chrono::milliseconds(100));
+                    status = (it->second).wait_for(std::chrono::milliseconds(10));
 
-                    if (status == std::future_status::deferred)
-                    {
-                        assert(status != std::future_status::deferred); // should not happen
-                        const CSearchInfo* const sInfo = (it->first).get();
-                        SendMessage(*this, SEARCH_FOUND, 0, (LPARAM)sInfo);
-                        it = futureMap.erase(it); // done
-                    }
-                    else if (status == std::future_status::timeout)
-                    {
-                        ++it; // still running
-                    }
-                    else if (status == std::future_status::ready)
+                    if (status == std::future_status::ready)
                     {
                         const CSearchInfo* const sInfo  = (it->first).get();
                         int const                nFound = (it->second).get();
                         if (nFound > 0)
                             SendMessage(*this, SEARCH_FOUND, (WPARAM)nFound, (LPARAM)sInfo);
                         SendMessage(*this, SEARCH_PROGRESS, (!sInfo->skipped || bAlwaysSearch) && (nFound >= 0), 0);
+                        it = futureMap.erase(it); // done
+                    }
+                    else if (status == std::future_status::timeout)
+                    {
+                        ++it; // still running
+                    }
+                    else //if (status == std::future_status::deferred)
+                    {
+                        assert(status != std::future_status::ready); // should not happen
+                        SendMessage(*this, SEARCH_PROGRESS, 0, 0);
                         it = futureMap.erase(it); // done
                     }
                 }
@@ -2756,6 +2754,12 @@ bool CSearchDlg::MatchPath(LPCTSTR pathbuf)
 int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wstring& searchRoot, const SearchFlags_t searchFlags,
                            const std::wstring& searchString, const std::wstring& searchStringUtf16le, const std::wstring& replaceString)
 {
+    if (InterlockedAnd(&s_Cancelled, TRUE))
+    {
+        sinfoPtr->skipped = true;
+        return -1;
+    }
+
     int nFound = 0;
     // we keep it simple:
     // files bigger than 30MB are considered binary. Binary files are searched
