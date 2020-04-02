@@ -118,7 +118,7 @@ public:
     std::wstring const get()
     {
         std::lock_guard<std::mutex> lck(_mtx);
-        return (!_list.empty() ? _list.back() : L"");
+        return (_list.empty() ? L"" : _list.back());
     }
 
     void erase(const std::wstring& filePath)
@@ -129,7 +129,10 @@ public:
         for (auto it = _list.cbegin();  it != _list.cend(); /*no increment*/)
         {
             if (fileName.compare(*it) == 0)
+            {
                 it = _list.erase(it);
+                break; // done
+            }
             else
                 ++it;
         }
