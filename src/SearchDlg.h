@@ -48,6 +48,7 @@ enum ExecuteAction
     Replace
 };
 
+#define SDLG_SHOW_CURRENT_FILES  TRUE
 
 typedef struct _SearchFlags_t
 {
@@ -95,6 +96,52 @@ public:
     }
     // auto unlock (lock_guard, RAII)
 };
+
+#if SDLG_SHOW_CURRENT_FILES
+// ---------------------------------------
+// a thread-safe list of currently searched files
+// ---------------------------------------
+class CurrentFileSearched
+{
+    mutable std::mutex      _mtx;
+    std::list<std::wstring> _list;
+
+public:
+    void insert(const std::wstring& filePath)
+    {
+        std::lock_guard<std::mutex> lck(_mtx);
+        size_t const pos = filePath.find_last_of('\\');
+        std::wstring const fileName = (pos != std::wstring::npos) ? filePath.substr(pos + 1) : filePath;
+        _list.push_back(fileName);
+    }
+
+    std::wstring const get()
+    {
+        std::lock_guard<std::mutex> lck(_mtx);
+        return (!_list.empty() ? _list.back() : L"");
+    }
+
+    void erase(const std::wstring& filePath)
+    {
+        std::lock_guard<std::mutex> lck(_mtx);
+        size_t const pos = filePath.find_last_of('\\');
+        std::wstring const fileName = (pos != std::wstring::npos) ? filePath.substr(pos + 1) : filePath;
+        for (auto it = _list.cbegin();  it != _list.cend(); /*no increment*/)
+        {
+            if (fileName.compare(*it) == 0)
+                it = _list.erase(it);
+            else
+                ++it;
+        }
+    }
+
+    void clear()
+    {
+        std::lock_guard<std::mutex> lck(_mtx);
+        _list.clear();
+    }
+};
+#endif
 
 
 /**

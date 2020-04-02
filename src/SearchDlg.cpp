@@ -80,6 +80,10 @@ static volatile LONG s_bNOTSearch      = FALSE;
 
 static BackupAndTempFilesLog s_BackupAndTmpFiles;
 
+#if SDLG_SHOW_CURRENT_FILES
+static CurrentFileSearched   s_searchedFile;
+#endif
+
 
 CSearchDlg::CSearchDlg(HWND hParent)
     : m_searchedItems(0)
@@ -465,7 +469,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_resizer.AddControl(hwndDlg, IDC_RESULTLIST, RESIZER_TOPLEFTBOTTOMRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_RESULTFILES, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_RESULTCONTENT, RESIZER_TOPLEFTRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_SEARCHINFOLABEL, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_SEARCHINFOLABEL, RESIZER_BOTTOMLEFTRIGHT);
 
             InitDialog(hwndDlg, IDI_GREPWIN);
 
@@ -1219,19 +1223,25 @@ void CSearchDlg::SaveWndPosition()
 
 void CSearchDlg::UpdateInfoLabel( bool withCurrentFile )
 {
-    UNREFERENCED_PARAMETER(withCurrentFile);
     std::wstring sText;
     TCHAR buf[1024] = {0};
     _stprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABEL).c_str(),
         m_searchedItems, m_totalitems-m_searchedItems, m_totalmatches, m_items.size());
     sText = buf;
-    //~if (withCurrentFile && !m_searchedFile.empty())
-    //~{
-    //~    sText += L", ";
-    //~    swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABELFILE).c_str(), m_searchedFile.c_str());
-    //~    sText += buf;
-    //~}
-
+#if SDLG_SHOW_CURRENT_FILES
+    if (withCurrentFile)
+    {
+        std::wstring const file = s_searchedFile.get();
+        if (!file.empty())
+        {
+            sText += L", ";
+            swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABELFILE).c_str(), file.c_str());
+            sText += buf;
+        }
+    }
+#else
+    UNREFERENCED_PARAMETER(withCurrentFile);
+#endif
     SetDlgItemText(*this, IDC_SEARCHINFOLABEL, sText.c_str());
 }
 
@@ -2491,6 +2501,10 @@ DWORD CSearchDlg::SearchThread()
             std::unordered_map<std::shared_ptr<CSearchInfo>, std::shared_future<int>> futureMap;
             std::unordered_map<std::shared_ptr<CSearchInfo>, int> readyMap;
 
+#if SDLG_SHOW_CURRENT_FILES
+            s_searchedFile.clear();
+#endif
+
             while ((fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse))&&((!InterlockedAnd(&s_Cancelled, TRUE))||(bAlwaysSearch)))
             {
                 if (bAlwaysSearch && _wcsicmp(searchpath.c_str(), sPath.c_str()))
@@ -2691,6 +2705,10 @@ DWORD CSearchDlg::SearchThread()
         }
     } // pathvector
 
+#if SDLG_SHOW_CURRENT_FILES
+    s_searchedFile.clear();
+#endif
+
     SendMessage(*this, SEARCH_END, 0, 0);
     InterlockedExchange(&s_dwThreadRunning, FALSE);
 
@@ -2773,7 +2791,7 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
     }
 
     SearchReplace(localSearchString, L"${filepath}", sinfoPtr->filepath);
-    std::wstring filenamefull = sinfoPtr->filepath.substr(sinfoPtr->filepath.find_last_of('\\') + 1);
+    std::wstring const filenamefull = sinfoPtr->filepath.substr(sinfoPtr->filepath.find_last_of('\\') + 1);
     auto dotpos = filenamefull.find_last_of('.');
     if (dotpos != std::string::npos)
     {
@@ -2787,7 +2805,9 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
     }
 
     CTextFile textfile;
-    //~m_searchedFile = sinfoPtr->filepath;
+#if SDLG_SHOW_CURRENT_FILES
+    s_searchedFile.insert(filenamefull);
+#endif
     CTextFile::UnicodeType type = CTextFile::AUTOTYPE;
     bool bLoadResult = false;
     {
@@ -2950,7 +2970,9 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
         }
         catch (const std::exception&)
         {
-            //m_searchedFile.clear();
+#if SDLG_SHOW_CURRENT_FILES
+            s_searchedFile.erase(sinfoPtr->filepath);
+#endif
             sinfoPtr->skipped = true;
             return -1;
         }
@@ -2961,7 +2983,9 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
         {
             sinfoPtr->readerror = true;
             sinfoPtr->skipped   = true;
-            //m_searchedFile.clear();
+#if SDLG_SHOW_CURRENT_FILES
+            s_searchedFile.erase(sinfoPtr->filepath);
+#endif
             return 0;
         }
 
@@ -3165,13 +3189,17 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
             }
             catch (const std::exception&)
             {
-                //m_searchedFile.clear();
+#if SDLG_SHOW_CURRENT_FILES
+                s_searchedFile.erase(sinfoPtr->filepath);
+#endif
                 sinfoPtr->skipped = true;
                 return -1;
             }
             catch (...)
             {
-                //m_searchedFile.clear();
+#if SDLG_SHOW_CURRENT_FILES
+                s_searchedFile.erase(sinfoPtr->filepath);
+#endif
                 sinfoPtr->skipped = true;
                 return -1;
             }
@@ -3179,7 +3207,9 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
         else
             sinfoPtr->skipped = true;
     }
-    //m_searchedFile.clear();
+#if SDLG_SHOW_CURRENT_FILES
+    s_searchedFile.erase(sinfoPtr->filepath);
+#endif
     if (InterlockedAnd(&s_bNOTSearch, TRUE))
         return (nFound ? 0 : 1);
     return nFound;
