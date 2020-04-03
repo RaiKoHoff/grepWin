@@ -33,13 +33,13 @@
 #include <mutex>
 
 
-#define SEARCH_FOUND        (WM_APP+1)
-#define SEARCH_START        (WM_APP+2)
-#define SEARCH_PROGRESS     (WM_APP+3)
-#define SEARCH_END          (WM_APP+4)
+#define SEARCH_START         (WM_APP+1)
+#define SEARCH_ITEM_COUNT    (WM_APP+2)
+#define SEARCH_PROGRESS      (WM_APP+3)
+#define SEARCH_END           (WM_APP+4)
 #define WM_GREPWIN_THREADEND (WM_APP+5)
 
-#define ID_ABOUTBOX         0x0010
+#define ID_ABOUTBOX          0x0010
 
 enum ExecuteAction
 {
@@ -47,8 +47,6 @@ enum ExecuteAction
     Search,
     Replace
 };
-
-#define SDLG_SHOW_CURRENT_FILES  TRUE
 
 typedef struct _SearchFlags_t
 {
@@ -97,7 +95,7 @@ public:
     // auto unlock (lock_guard, RAII)
 };
 
-#if SDLG_SHOW_CURRENT_FILES
+
 // ---------------------------------------
 // a thread-safe list of currently searched files
 // ---------------------------------------
@@ -144,7 +142,6 @@ public:
         _list.clear();
     }
 };
-#endif
 
 
 /**
@@ -189,7 +186,7 @@ protected:
 
     bool                    InitResultList();
     void                    FillResultList();
-    bool                    AddFoundEntry(CSearchInfo * pInfo, bool bOnlyListControl = false);
+    bool                    AddFoundEntry(const CSearchInfo * pInfo, bool bOnlyListControl = false);
     void                    ShowContextMenu(int x, int y);
     void                    DoListNotify(LPNMITEMACTIVATE lpNMItemActivate);
     void                    OpenFileAtListIndex(int listIndex);

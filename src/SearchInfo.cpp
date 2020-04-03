@@ -25,7 +25,6 @@ CSearchInfo::CSearchInfo()
     , folder(false)
     , matchcount(0)
     , encoding(CTextFile::UnicodeType::AUTOTYPE)
-    , skipped(false)
 {
     modifiedtime.dwHighDateTime = 0;
     modifiedtime.dwLowDateTime  = 0;
@@ -38,7 +37,6 @@ CSearchInfo::CSearchInfo(const std::wstring& path)
     , folder(false)
     , matchcount(0)
     , encoding(CTextFile::UnicodeType::AUTOTYPE)
-    , skipped(false)
 {
     modifiedtime.dwHighDateTime = 0;
     modifiedtime.dwLowDateTime  = 0;
