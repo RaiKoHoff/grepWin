@@ -372,8 +372,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             CheckRadioButton(hwndDlg, IDC_ALLSIZERADIO, IDC_SIZERADIO, m_bAllSize ? IDC_ALLSIZERADIO : IDC_SIZERADIO);
             CheckRadioButton(hwndDlg, IDC_FILEPATTERNREGEX, IDC_FILEPATTERNTEXT, m_bUseRegexForPaths ? IDC_FILEPATTERNREGEX : IDC_FILEPATTERNTEXT);
 
-            //if (!m_searchString.empty())
-            //    CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
+            if (!m_searchString.empty())
+                CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
 
             DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
             DialogEnableWindow(IDC_ADDTOBOOKMARKS, false);
@@ -2492,6 +2492,8 @@ DWORD CSearchDlg::SearchThread()
         SearchStringutf16 += L"\\x00";
     }
 
+    s_searchedFile.clear();
+
     for (std::wstring searchpath : pathvector)
     {
         size_t endpos = searchpath.find_last_not_of(L" \\");
@@ -2502,7 +2504,6 @@ DWORD CSearchDlg::SearchThread()
                 searchpath += L"\\";
         }
         std::wstring searchRoot = searchpath;
-        size_t totalFileCOunt = 0;
         if (!searchpath.empty())
         {
             bool bAlwaysSearch = false;
@@ -2518,8 +2519,6 @@ DWORD CSearchDlg::SearchThread()
 
             std::unordered_map<std::shared_ptr<CSearchInfo>, std::shared_future<int>> futureMap;
             std::unordered_map<std::shared_ptr<CSearchInfo>, int> readyMap;
-
-            s_searchedFile.clear();
 
             while ((fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse) || bAlwaysSearch) && !IsCancelled())
             {
@@ -2621,7 +2620,6 @@ DWORD CSearchDlg::SearchThread()
                                                                              m_searchString, SearchStringutf16, m_replaceString);
 
                             futureMap.insert(std::make_pair(SinfoPtr, foundFuture));
-                            ++totalFileCOunt;
                         }
                     }
                     else
@@ -2819,7 +2817,6 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
             SearchReplace(localSearchString, L"${fileext}", fileext);
         }
     }
-    s_searchedFile.insert(filenamefull);
 
     CTextFile textfile;
     CTextFile::UnicodeType type = CTextFile::AUTOTYPE;
@@ -2831,6 +2828,7 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
     sinfoPtr->encoding = type;
     if ((bLoadResult) && ((type != CTextFile::BINARY) || (searchFlags.bIncludeBinary) || searchFlags.bSearchAlways))
     {
+        s_searchedFile.insert(filenamefull);
         sinfoPtr->readerror = false;
         std::wstring::const_iterator start, end;
         start = textfile.GetFileString().begin();
@@ -2976,7 +2974,10 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
                             // restore the attributes
                             SetFileAttributes(sinfoPtr->filepath.c_str(), origAttributes);
                             if (!bRet)
+                            {
+                                s_searchedFile.erase(filenamefull);
                                 return -1;
+                            }
                         }
                     }
                 }
@@ -2984,16 +2985,16 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
         }
         catch (const std::exception&)
         {
-            s_searchedFile.erase(sinfoPtr->filepath);
+            s_searchedFile.erase(filenamefull);
             return -1;
         }
+        s_searchedFile.erase(filenamefull);
     }
     else
     {
         if (type == CTextFile::AUTOTYPE)
         {
             sinfoPtr->readerror = true;
-            s_searchedFile.erase(sinfoPtr->filepath);
             return -1;
         }
 
@@ -3003,6 +3004,7 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
 
         if ((type != CTextFile::BINARY) || (searchFlags.bIncludeBinary) || searchFlags.bSearchAlways)
         {
+            s_searchedFile.insert(filenamefull);
             sinfoPtr->encoding = type;
             std::string filepath = CUnicodeUtils::StdGetANSI(sinfoPtr->filepath);
             std::string searchfor = (type == CTextFile::ANSI) ? CUnicodeUtils::StdGetANSI(searchString) : CUnicodeUtils::StdGetUTF8(searchString);
@@ -3187,19 +3189,19 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
             }
             catch (const std::exception&)
             {
-                s_searchedFile.erase(sinfoPtr->filepath);
+                s_searchedFile.erase(filenamefull);
                 return -1;
             }
             catch (...)
             {
-                s_searchedFile.erase(sinfoPtr->filepath);
+                s_searchedFile.erase(filenamefull);
                 return -1;
             }
+            s_searchedFile.erase(filenamefull);
         }
         else
             nFound = -1; // skipped
     }
-    s_searchedFile.erase(sinfoPtr->filepath);
 
     if (IsNOTSearch())
         return ((nFound > 0) ? 0 : 1);
