@@ -47,6 +47,8 @@
 #include "Theme.h"
 #include "DarkModeHelper.h"
 
+#include "SearchMT.h" // multi-threading helper
+
 #include <string>
 #include <map>
 #include <iostream>
@@ -54,7 +56,6 @@
 #include <iterator>
 #include <algorithm>
 #include <Commdlg.h>
-#include <future>
 
 #pragma warning(push)
 #pragma warning(disable: 4996) // warning STL4010: Various members of std::allocator are deprecated in C++17
@@ -67,6 +68,7 @@
 #define LABELUPDATETIMER   10
 
 DWORD WINAPI SearchThreadEntry(LPVOID lpParam);
+DWORD WINAPI EvaluationThreadEntry(LPVOID lpParam);
 
 UINT CSearchDlg::GREPWIN_STARTUPMSG = RegisterWindowMessage(_T("grepWinNP3_StartupMessage"));
 std::map<size_t, DWORD> linepositions;
@@ -74,16 +76,22 @@ std::map<size_t, DWORD> linepositions;
 extern ULONGLONG g_startTime;
 
 
-static volatile LONG s_ThreadRunning = FALSE;
-static volatile LONG s_Cancelled     = FALSE;
-static volatile LONG s_NOTSearch     = FALSE;
-inline bool IsThreadRunning() { return InterlockedAnd(&s_ThreadRunning, TRUE); }
+static volatile LONG s_SearchThreadRunning     = FALSE;
+static volatile LONG s_EvaluationThreadRunning = FALSE;
+static volatile LONG s_Cancelled               = FALSE;
+static volatile LONG s_NOTSearch               = FALSE;
+
+inline bool IsSearchThreadRunning() { return InterlockedAnd(&s_SearchThreadRunning, TRUE); }
+inline bool IsEvaluationThreadRunning() { return InterlockedAnd(&s_EvaluationThreadRunning, TRUE); }
 inline bool IsCancelled() { return InterlockedAnd(&s_Cancelled, TRUE); }
 inline bool IsNOTSearch() { return InterlockedAnd(&s_NOTSearch, TRUE); }
 
-static BackupAndTempFilesLog s_BackupAndTmpFiles;
-static CurrentFileSearched   s_searchedFile;
 
+static BackupAndTempFilesLog s_BackupAndTmpFiles;
+static SearchThreadMap s_SearchThreadMap;
+
+
+// ==================================================================================
 
 CSearchDlg::CSearchDlg(HWND hParent)
     : m_searchedItems(0)
@@ -522,7 +530,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         {
             if (!DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)))
             {
-                if (IsThreadRunning())
+                if (IsEvaluationThreadRunning())
                     InterlockedExchange(&s_Cancelled, TRUE);
                 else
                 {
@@ -572,7 +580,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         break;
     case WM_SETCURSOR:
         {
-            if (IsThreadRunning())
+            if (IsEvaluationThreadRunning())
             {
                 SetCursor(LoadCursor(nullptr, IDC_APPSTARTING));
                 return TRUE;
@@ -585,18 +593,12 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_totalitems = 0;
             m_searchedItems = 0;
             m_totalmatches = 0;
-            UpdateInfoLabel(false);
+            UpdateInfoLabel();
             SetTimer(*this, LABELUPDATETIMER, 200, nullptr);
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETSTATE, PBST_PAUSED, 0);
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETPOS, 1, 0);
+            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETSTATE, PBST_NORMAL, 0);
+            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETMARQUEE, 1, 0);
         }
         break;
-    case SEARCH_ITEM_COUNT:
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETSTATE, PBST_NORMAL, 0);
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETSTEP, 1, 0);
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETPOS, 1, 0);
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETRANGE32, wParam, lParam);
-            break;
     case SEARCH_PROGRESS:
         {
             const CSearchInfo* const sInfo = (const CSearchInfo* const)(wParam);
@@ -605,23 +607,22 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             if ((nFound > 0) || (m_searchString.empty()) || (sInfo->readerror))
             {
                 AddFoundEntry(sInfo);
-                UpdateInfoLabel(false);
+                UpdateInfoLabel();
             }
             if (nFound >= 0)
                 m_searchedItems++;
             m_totalitems++;
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_STEPIT, 0, 0);
         }
         break;
     case SEARCH_END:
         {
             AddFoundEntry(nullptr, true);
             AutoSizeAllColumns();
-            UpdateInfoLabel(false);
+            UpdateInfoLabel();
             ::SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_SEARCH).c_str());
             DialogEnableWindow(IDC_RESULTFILES, true);
             DialogEnableWindow(IDC_RESULTCONTENT, true);
-            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETPOS, 1, 0);
+            SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETMARQUEE, 0, 0);
             ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_HIDE);
             KillTimer(*this, LABELUPDATETIMER);
         }
@@ -631,7 +632,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             if (wParam == LABELUPDATETIMER)
             {
                 AddFoundEntry(nullptr, true);
-                UpdateInfoLabel(true);
+                UpdateInfoLabel();
             }
         }
         break;
@@ -786,11 +787,10 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
     case IDC_REPLACE:
     case IDOK:
         {
-            if (IsThreadRunning())
+            if (IsEvaluationThreadRunning())
             {
                 InterlockedExchange(&s_Cancelled, TRUE);
                 SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETSTATE, PBST_PAUSED, 0);
-                SendDlgItemMessage(*this, IDC_PROGRESS, PBM_STEPIT, 0, 0);
             }
             else
             {
@@ -847,14 +847,15 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     }
                 }
                 m_bConfirmationOnReplace = true;
-                InterlockedExchange(&s_ThreadRunning, TRUE);
                 InterlockedExchange(&s_Cancelled, FALSE);
                 InterlockedExchange(&s_NOTSearch, ((GetKeyState(VK_SHIFT) & 0x8000) != 0) ? TRUE : FALSE);
-                SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_STOP).c_str());
                 ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_SHOW);
+
                 // now start the thread which does the searching
-                DWORD dwThreadId = 0;
-                HANDLE hThread= CreateThread(
+                InterlockedExchange(&s_SearchThreadRunning, TRUE);
+                SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_STOP).c_str());
+                DWORD  dwThreadId = 0;
+                HANDLE hThread = CreateThread(
                     nullptr,              // no security attribute
                     0,                 // default stack size
                     SearchThreadEntry,
@@ -870,8 +871,32 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 else
                 {
                     InterlockedExchange(&s_Cancelled, TRUE);
+                    InterlockedExchange(&s_SearchThreadRunning, FALSE);
+                    ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_HIDE);
+                }
+
+                InterlockedExchange(&s_EvaluationThreadRunning, TRUE);
+                // now start the thread which does result evaluation
+                dwThreadId = 0;
+                hThread    = CreateThread(
+                    nullptr, // no security attribute
+                    0,       // default stack size
+                    EvaluationThreadEntry,
+                    (LPVOID)this, // thread parameter
+                    0,            // not suspended
+                    &dwThreadId); // returns thread ID
+                if (hThread != nullptr)
+                {
+                    // Closing the handle of a running thread just decreases
+                    // the ref count for the thread object.
+                    CloseHandle(hThread);
+                }
+                else
+                {
+                    InterlockedExchange(&s_Cancelled, TRUE);
                     SendMessage(*this, SEARCH_END, 0, 0);
-                    InterlockedExchange(&s_ThreadRunning, FALSE);
+                    InterlockedExchange(&s_EvaluationThreadRunning, FALSE);
+                    ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_HIDE);
                 }
             }
         }
@@ -880,7 +905,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         {
             if (DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\escclose", FALSE)))
             {
-                if (IsThreadRunning())
+                if (IsEvaluationThreadRunning())
                     InterlockedExchange(&s_Cancelled, TRUE);
                 else
                 {
@@ -1233,23 +1258,13 @@ void CSearchDlg::SaveWndPosition()
     }
 }
 
-void CSearchDlg::UpdateInfoLabel( bool withCurrentFile )
+void CSearchDlg::UpdateInfoLabel()
 {
     std::wstring sText;
     TCHAR buf[1024] = {0};
     _stprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABEL).c_str(),
         m_searchedItems, m_totalitems-m_searchedItems, m_totalmatches, m_items.size());
     sText = buf;
-    if (withCurrentFile)
-    {
-        std::wstring const file = s_searchedFile.get();
-        if (!file.empty())
-        {
-            sText += L", ";
-            swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABELFILE).c_str(), file.c_str());
-            sText += buf;
-        }
-    }
     SetDlgItemText(*this, IDC_SEARCHINFOLABEL, sText.c_str());
 }
 
@@ -2062,6 +2077,22 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
         SearchReplace(escapedsearch, L"\"", L"\\\"");
         linenumberparam_before = CStringUtils::Format(L"/g %s /mr \"%s\"", textlinebuf, escapedsearch.c_str());
     }
+    else if (appname.find(_T("notepad3.exe")) != std::wstring::npos)
+    {
+        // Notepad3
+        std::wstring mode = L"mb";
+        if (m_bUseRegex)
+            mode.append(L"r");
+        if (m_bCaseSensitive)
+            mode.append(L"c");
+        if (m_bDotMatchesNewline)
+            mode.append(L"a");
+
+        std::wstring escapedsearch = m_searchString;
+        EscCtrlCharacters(escapedsearch);
+
+        linenumberparam_before = CStringUtils::Format(L"/%s \"%s\" /g %s -", mode.c_str(), escapedsearch.c_str(), textlinebuf);
+    }
     else if ((appname.find(_T("bowpad.exe")) != std::wstring::npos) || (appname.find(_T("bowpad64.exe")) != std::wstring::npos))
     {
         // BowPad
@@ -2432,6 +2463,8 @@ DWORD CSearchDlg::SearchThread()
 
     std::unique_ptr<TCHAR[]> pathbuf(new TCHAR[MAX_PATH_NEW]);
 
+    s_SearchThreadMap.clear();
+
     // split the path string into single paths and
     // add them to an array
     const TCHAR * pBufSearchPath = m_searchpath.c_str();
@@ -2492,8 +2525,6 @@ DWORD CSearchDlg::SearchThread()
         SearchStringutf16 += L"\\x00";
     }
 
-    s_searchedFile.clear();
-
     for (std::wstring searchpath : pathvector)
     {
         size_t endpos = searchpath.find_last_not_of(L" \\");
@@ -2517,8 +2548,6 @@ DWORD CSearchDlg::SearchThread()
             bool bRecurse = m_bIncludeSubfolders;
             std::wstring sPath;
 
-            std::unordered_map<std::shared_ptr<CSearchInfo>, std::shared_future<int>> futureMap;
-            std::unordered_map<std::shared_ptr<CSearchInfo>, int> readyMap;
 
             while ((fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse) || bAlwaysSearch) && !IsCancelled())
             {
@@ -2592,15 +2621,15 @@ DWORD CSearchDlg::SearchThread()
                     bRecurse = ((m_bIncludeSubfolders)&&(bSearch));
                     bool bPattern = MatchPath(pathbuf.get());
 
-                    auto SinfoPtr          = std::make_shared<CSearchInfo>(pathbuf.get());
-                    SinfoPtr->filesize     = fullfilesize;
-                    SinfoPtr->modifiedtime = ft;
+                    auto sInfoPtr          = std::make_shared<CSearchInfo>(pathbuf.get());
+                    sInfoPtr->filesize     = fullfilesize;
+                    sInfoPtr->modifiedtime = ft;
 
                     if ((bSearch && bPattern) || bAlwaysSearch)
                     {
                         if (m_searchString.empty())
                         {
-                            readyMap.insert({SinfoPtr, 1});
+                            s_SearchThreadMap.insert_ready(sInfoPtr, 1);
                         }
                         else
                         {
@@ -2616,15 +2645,15 @@ DWORD CSearchDlg::SearchThread()
                                 m_bReplace
                             };
 
-                            std::shared_future<int> foundFuture = std::async(std::launch::async, SearchFile, SinfoPtr, searchRoot, searchFlags, 
+                            std::shared_future<int> foundFuture = std::async(std::launch::async, SearchFile, sInfoPtr, searchRoot, searchFlags, 
                                                                              m_searchString, SearchStringutf16, m_replaceString);
 
-                            futureMap.insert(std::make_pair(SinfoPtr, foundFuture));
+                            s_SearchThreadMap.insert_future(sInfoPtr, foundFuture);
                         }
                     }
                     else
                     {
-                        readyMap.insert({SinfoPtr, -1});
+                        s_SearchThreadMap.insert_ready(sInfoPtr, -1);
                     }
                 }
                 else // directory: search for filename
@@ -2672,72 +2701,70 @@ DWORD CSearchDlg::SearchThread()
                             }
                             if (bSearch)
                             {
-                                auto SinfoPtr          = std::make_shared<CSearchInfo>(pathbuf.get());
-                                SinfoPtr->modifiedtime = pFindData->ftLastWriteTime;
-                                SinfoPtr->folder       = true;
-                                readyMap.insert({SinfoPtr, 1});
+                                auto sInfoPtr          = std::make_shared<CSearchInfo>(pathbuf.get());
+                                sInfoPtr->modifiedtime = pFindData->ftLastWriteTime;
+                                sInfoPtr->folder       = true;
+                                s_SearchThreadMap.insert_ready(sInfoPtr, -1);
                             }
                         }
                     }
                 }
                 bAlwaysSearch = false;
-            } // while
 
-            size_t const itemCount = readyMap.size() + futureMap.size() + 1;
-            SendMessage(*this, SEARCH_ITEM_COUNT, 0, (LPARAM)(itemCount));
-
-            if (!IsCancelled())
-              for (const auto& result : readyMap)
-              {
-                  const CSearchInfo* const sInfo  = result.first.get();
-                  int const                nFound = result.second;
-                  SendMessage(*this, SEARCH_PROGRESS, (WPARAM)sInfo, nFound);
-              }
-
-            std::future_status status;
-
-            while (!futureMap.empty() && !IsCancelled())
-            {
-                for (auto it = futureMap.cbegin(); it != futureMap.cend() /* not hoisted */; /* no increment */)
-                {
-                    status = (it->second).wait_for(std::chrono::milliseconds(10));
-
-                    if (status == std::future_status::ready)
-                    {
-                        const CSearchInfo* const sInfo  = (it->first).get();
-                        int const                nFound = (it->second).get();
-                        SendMessage(*this, SEARCH_PROGRESS, (WPARAM)sInfo, nFound);
-                        it = futureMap.erase(it); // done
-                    }
-                    else if (status == std::future_status::timeout)
-                    {
-                        ++it; // still running
-                    }
-                    else //if (status == std::future_status::deferred)
-                    {
-                        assert(status != std::future_status::ready); // should not happen
-                        it = futureMap.erase(it); // done
-                    }
-                }
-            }
-        }
+            } // while next file
+        } // empty searchpath
     } // pathvector
 
-    s_searchedFile.clear();
+    InterlockedExchange(&s_SearchThreadRunning, FALSE);
 
-    InterlockedExchange(&s_Cancelled, TRUE);
+    return 0L;
+}
+
+DWORD WINAPI SearchThreadEntry(LPVOID lpParam)
+{
+    auto* const pThis = (CSearchDlg* const)lpParam;
+    if (pThis)
+        return pThis->SearchThread();
+    return 0L;
+}
+
+
+
+DWORD CSearchDlg::EvaluationThread()
+{
+    while (IsSearchThreadRunning() || !s_SearchThreadMap.empty())
+    {
+        int                                nFound   = -1;
+        std::shared_ptr<CSearchInfo> const sInfoPtr = s_SearchThreadMap.retrieve(nFound);
+        if (sInfoPtr != nullptr)
+        {
+            SendMessage(*this, SEARCH_PROGRESS, (WPARAM)sInfoPtr.get(), nFound);
+        }
+    }
+
     SendMessage(*this, SEARCH_END, 0, 0);
-    InterlockedExchange(&s_ThreadRunning, FALSE);
-
+    
     // refresh cursor
     POINT pt;
     GetCursorPos(&pt);
     SetCursorPos(pt.x, pt.y);
 
-    PostMessage(m_hwnd, WM_GREPWIN_THREADEND, 0, 0);
+    s_SearchThreadMap.clear();
 
+    InterlockedExchange(&s_EvaluationThreadRunning, FALSE);
+    PostMessage(m_hwnd, WM_GREPWIN_THREADEND, 0, 0);
     return 0L;
 }
+
+DWORD WINAPI EvaluationThreadEntry(LPVOID lpParam)
+{
+    auto* const pThis = (CSearchDlg* const)lpParam;
+    if (pThis)
+        return pThis->EvaluationThread();
+    return 0L;
+}
+
+
 
 bool CSearchDlg::MatchPath(LPCTSTR pathbuf)
 {
@@ -2828,7 +2855,6 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
     sinfoPtr->encoding = type;
     if ((bLoadResult) && ((type != CTextFile::BINARY) || (searchFlags.bIncludeBinary) || searchFlags.bSearchAlways))
     {
-        s_searchedFile.insert(filenamefull);
         sinfoPtr->readerror = false;
         std::wstring::const_iterator start, end;
         start = textfile.GetFileString().begin();
@@ -2975,7 +3001,6 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
                             SetFileAttributes(sinfoPtr->filepath.c_str(), origAttributes);
                             if (!bRet)
                             {
-                                s_searchedFile.erase(filenamefull);
                                 return -1;
                             }
                         }
@@ -2985,10 +3010,8 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
         }
         catch (const std::exception&)
         {
-            s_searchedFile.erase(filenamefull);
             return -1;
         }
-        s_searchedFile.erase(filenamefull);
     }
     else
     {
@@ -3004,7 +3027,6 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
 
         if ((type != CTextFile::BINARY) || (searchFlags.bIncludeBinary) || searchFlags.bSearchAlways)
         {
-            s_searchedFile.insert(filenamefull);
             sinfoPtr->encoding = type;
             std::string filepath = CUnicodeUtils::StdGetANSI(sinfoPtr->filepath);
             std::string searchfor = (type == CTextFile::ANSI) ? CUnicodeUtils::StdGetANSI(searchString) : CUnicodeUtils::StdGetUTF8(searchString);
@@ -3189,15 +3211,12 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
             }
             catch (const std::exception&)
             {
-                s_searchedFile.erase(filenamefull);
                 return -1;
             }
             catch (...)
             {
-                s_searchedFile.erase(filenamefull);
                 return -1;
             }
-            s_searchedFile.erase(filenamefull);
         }
         else
             nFound = -1; // skipped
@@ -3208,13 +3227,6 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
     return nFound;
 }
 
-DWORD WINAPI SearchThreadEntry(LPVOID lpParam)
-{
-    auto * pThis = (CSearchDlg*)lpParam;
-    if (pThis)
-        return pThis->SearchThread();
-    return 0L;
-}
 
 void CSearchDlg::formatDate(TCHAR date_native[], const FILETIME& filetime, bool force_short_fmt)
 {

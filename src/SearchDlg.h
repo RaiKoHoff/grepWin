@@ -34,10 +34,9 @@
 
 
 #define SEARCH_START         (WM_APP+1)
-#define SEARCH_ITEM_COUNT    (WM_APP+2)
-#define SEARCH_PROGRESS      (WM_APP+3)
-#define SEARCH_END           (WM_APP+4)
-#define WM_GREPWIN_THREADEND (WM_APP+5)
+#define SEARCH_PROGRESS      (WM_APP+2)
+#define SEARCH_END           (WM_APP+3)
+#define WM_GREPWIN_THREADEND (WM_APP+4)
 
 #define ID_ABOUTBOX          0x0010
 
@@ -63,87 +62,6 @@ typedef struct _SearchFlags_t
 } SearchFlags_t;
 
 
-// ---------------------------------------
-// a thread-safe log of backup-file paths
-// ---------------------------------------
-class BackupAndTempFilesLog
-{
-    mutable std::mutex     _mtx;
-    std::set<std::wstring> _set;
-
-public:
-
-    void insert(const std::wstring& backupFilePath)
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        _set.insert(backupFilePath);
-    }
-    // auto unlock (lock_guard, RAII)
-
-    void clear()
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        _set.clear();
-    }
-    // auto unlock (lock_guard, RAII)
-
-    bool contains(const std::wstring& filePath)
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        return (_set.find(filePath) != _set.end());
-    }
-    // auto unlock (lock_guard, RAII)
-};
-
-
-// ---------------------------------------
-// a thread-safe list of currently searched files
-// ---------------------------------------
-class CurrentFileSearched
-{
-    mutable std::mutex      _mtx;
-    std::list<std::wstring> _list;
-
-public:
-    void insert(const std::wstring& filePath)
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        size_t const pos = filePath.find_last_of('\\');
-        std::wstring const fileName = (pos != std::wstring::npos) ? filePath.substr(pos + 1) : filePath;
-        _list.push_back(fileName);
-    }
-
-    std::wstring const get()
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        return (_list.empty() ? L"" : _list.back());
-    }
-
-    void erase(const std::wstring& filePath)
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        size_t const pos = filePath.find_last_of('\\');
-        std::wstring const fileName = (pos != std::wstring::npos) ? filePath.substr(pos + 1) : filePath;
-        for (auto it = _list.cbegin();  it != _list.cend(); /*no increment*/)
-        {
-            if (fileName.compare(*it) == 0)
-            {
-                it = _list.erase(it);
-                break; // done
-            }
-            else
-                ++it;
-        }
-    }
-
-    void clear()
-    {
-        std::lock_guard<std::mutex> lck(_mtx);
-        _list.clear();
-    }
-};
-
-
 /**
  * search dialog.
  */
@@ -154,6 +72,7 @@ public:
     ~CSearchDlg();
 
     DWORD                   SearchThread();
+    DWORD                   EvaluationThread();
     void                    SetSearchPath(const std::wstring& path) {m_searchpath = path; SearchReplace(m_searchpath, L"/", L"\\"); }
     void                    SetSearchString(const std::wstring& search) {m_searchString = search;}
     void                    SetFileMask(const std::wstring& mask, bool reg) {m_patternregex = mask; m_bUseRegexForPaths = reg;}
@@ -190,7 +109,7 @@ protected:
     void                    ShowContextMenu(int x, int y);
     void                    DoListNotify(LPNMITEMACTIVATE lpNMItemActivate);
     void                    OpenFileAtListIndex(int listIndex);
-    void                    UpdateInfoLabel(bool withCurrentFile);
+    void                    UpdateInfoLabel();
     bool                    SaveSettings();
     void                    SaveWndPosition();
     void                    formatDate(TCHAR date_native[], const FILETIME& filetime, bool force_short_fmt);
