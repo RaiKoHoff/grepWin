@@ -2548,13 +2548,14 @@ DWORD CSearchDlg::SearchThread()
             bool bRecurse = m_bIncludeSubfolders;
             std::wstring sPath;
 
-
             while ((fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse) || bAlwaysSearch) && !IsCancelled())
             {
+                if (s_BackupAndTmpFiles.contains(sPath))
+                    continue; // don't search own backup files
+
                 if (bAlwaysSearch && _wcsicmp(searchpath.c_str(), sPath.c_str()))
                     bAlwaysSearch = false;
-                if (s_BackupAndTmpFiles.contains(sPath))
-                    continue;
+ 
                 _tcscpy_s(pathbuf.get(), MAX_PATH_NEW, sPath.c_str());
                 if (!bIsDirectory)
                 {
@@ -2946,7 +2947,7 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
                     flags |= boost::match_not_bob;
                 }
             }
-            if ((searchFlags.bReplace)&&(nFound > 0))
+            if ((searchFlags.bReplace) && (nFound > 0))
             {
                 flags &= ~boost::match_prev_avail;
                 flags &= ~boost::match_not_bob;
@@ -2979,8 +2980,8 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
                             CPathUtils::CreateRecursiveDirectory(backupFolder);
                             backupfile = backupFolder + L"\\" + CPathUtils::GetFileName(sinfoPtr->filepath);
                         }
-                        CopyFile(sinfoPtr->filepath.c_str(), backupfile.c_str(), FALSE);
                         s_BackupAndTmpFiles.insert(backupfile);
+                        CopyFile(sinfoPtr->filepath.c_str(), backupfile.c_str(), FALSE);
                     }
                     if (!textfile.Save(sinfoPtr->filepath.c_str()))
                     {
@@ -3175,8 +3176,8 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
                                 CPathUtils::CreateRecursiveDirectory(backupFolder);
                                 backupfile = backupFolder + L"\\" + CPathUtils::GetFileName(sinfoPtr->filepath);
                             }
-                            CopyFile(sinfoPtr->filepath.c_str(), backupfile.c_str(), FALSE);
                             s_BackupAndTmpFiles.insert(backupfile);
+                            CopyFile(sinfoPtr->filepath.c_str(), backupfile.c_str(), FALSE);
                         }
 
                         flags &= ~boost::match_prev_avail;
