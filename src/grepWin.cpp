@@ -349,9 +349,23 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 }
                 searchDlg.SetDateLimit(parser.GetLongVal(L"datelimit"), date1, date2);
             }
-            ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, nullptr, IDR_SEARCHDLG);
-        }
 
+            if (!parser.HasVal(L"searchpath"))
+            {
+                auto cmdLineSize = wcslen(lpCmdLine);
+                auto cmdLinePath = std::make_unique<wchar_t[]>(cmdLineSize + 1);
+                wcscpy_s(cmdLinePath.get(), cmdLineSize + 1, lpCmdLine);
+                PathUnquoteSpaces(cmdLinePath.get());
+                if (PathFileExists(cmdLinePath.get()))
+                {
+                    spath = cmdLinePath.get();
+                    spath = SanitizeSearchPaths(spath);
+                    searchDlg.SetSearchPath(spath);
+                }
+            }
+
+            ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, NULL, IDR_SEARCHDLG);
+        }
         if (bPortable)
             g_iniFile.SaveFile(iniPath.c_str(), true);
         

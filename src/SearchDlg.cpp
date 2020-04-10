@@ -2851,7 +2851,7 @@ int CSearchDlg::SearchFile(std::shared_ptr<CSearchInfo> sinfoPtr, const std::wst
     bool bLoadResult = false;
     {
         ProfileTimer profile((L"file load and parse: " + sinfoPtr->filepath).c_str());
-        bLoadResult = textfile.Load(sinfoPtr->filepath.c_str(), type, searchFlags.bUTF8);
+        bLoadResult = textfile.Load(sinfoPtr->filepath.c_str(), type, searchFlags.bUTF8, &s_Cancelled);
     }
     sinfoPtr->encoding = type;
     if ((bLoadResult) && ((type != CTextFile::BINARY) || (searchFlags.bIncludeBinary) || searchFlags.bSearchAlways))
