@@ -26,6 +26,7 @@
 #include "Theme.h"
 #include "DarkModeHelper.h"
 #include <Commdlg.h>
+#include <thread>
 
 inline bool PathIsExistingFile(LPCWSTR pszPath) { return (PathFileExists(pszPath) && !PathIsDirectory(pszPath)); }
 
@@ -185,9 +186,16 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             SendDlgItemMessage(hwndDlg, IDC_DARKMODE, BM_SETCHECK, CTheme::Instance().IsDarkTheme() ? BST_CHECKED : BST_UNCHECKED, 0);
             EnableWindow(GetDlgItem(*this, IDC_DARKMODE), CTheme::Instance().IsDarkModeAllowed());
 
+            DWORD const nMaxWorker = std::thread::hardware_concurrency() << 2;
+            SendDlgItemMessage(hwndDlg, IDC_SPIN_MAXWORKER, UDM_SETRANGE, 0, MAKELPARAM(nMaxWorker, 1));
+            DWORD const nWorker = max(min(bPortable ? g_iniFile.GetLongValue(L"global", L"MaxNumOfWorker", nMaxWorker >> 1) : DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\MaxNumOfWorker", nMaxWorker >> 1)), nMaxWorker), 1);
+            wchar_t     number[32];
+            StringCchPrintf(number, ARRAYSIZE(number), L"%i", nWorker);
+            SendDlgItemMessage(hwndDlg, IDC_MAXNUMWORKER, WM_SETTEXT, 0, (WPARAM)number);
+
             AddToolTip(IDC_BACKUPINFOLDER, TranslatedString(hResource, IDS_BACKUPINFOLDER_TT).c_str());
             if (!CTheme::Instance().IsDarkModeAllowed())
-                AddToolTip(IDC_DARKMODE, TranslatedString(hResource, IDS_DARKMODE_TT).c_str());
+                SetDlgItemText(*this, IDC_DARKMODEINFO, TranslatedString(hResource, IDS_DARKMODE_TT).c_str());
 
             m_resizer.Init(hwndDlg);
             m_resizer.UseSizeGrip(!CTheme::Instance().IsDarkTheme());
@@ -202,9 +210,13 @@ LRESULT CSettingsDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             m_resizer.AddControl(hwndDlg, IDC_ESCKEY, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_BACKUPINFOLDER, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_ONLYONE, RESIZER_TOPLEFTRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_DARKMODE, RESIZER_BOTTOMLEFT);
+            m_resizer.AddControl(hwndDlg, IDC_DARKMODE, RESIZER_TOPLEFT);
+            m_resizer.AddControl(hwndDlg, IDC_DARKMODEINFO, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDOK, RESIZER_BOTTOMRIGHT);
             m_resizer.AddControl(hwndDlg, IDCANCEL, RESIZER_BOTTOMRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_TEXT_NUMOFWORKER, RESIZER_BOTTOMRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_MAXNUMWORKER, RESIZER_BOTTOMRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_SPIN_MAXWORKER, RESIZER_BOTTOMRIGHT);
         }
         return TRUE;
     case WM_COMMAND:
@@ -278,11 +290,16 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
             CLanguage::Instance().LoadFile(langpath);
             CLanguage::Instance().TranslateWindow(::GetParent(*this));
 
+            wchar_t worker[32];
+            SendDlgItemMessage(*this, IDC_MAXNUMWORKER, WM_GETTEXT, (LPARAM)32, (WPARAM)worker);
+            long const nWorker = _wtol((wchar_t*)worker);
+
             if (bPortable)
             {
                 g_iniFile.SetBoolValue(L"settings", L"escclose", (IsDlgButtonChecked(*this, IDC_ESCKEY) == BST_CHECKED));
                 g_iniFile.SetBoolValue(L"settings", L"backupinfolder", (IsDlgButtonChecked(*this, IDC_BACKUPINFOLDER) == BST_CHECKED));
                 g_iniFile.SetBoolValue(L"global", L"onlyone", (IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED));
+                g_iniFile.SetLongValue(L"global", L"MaxNumOfWorker", nWorker);
             }
             else
             {
@@ -292,6 +309,8 @@ LRESULT CSettingsDlg::DoCommand(int id, int /*msg*/)
                 backup = (IsDlgButtonChecked(*this, IDC_BACKUPINFOLDER) == BST_CHECKED);
                 CRegStdDWORD regOnlyOne(L"Software\\grepWinNP3\\onlyone", FALSE);
                 regOnlyOne = (IsDlgButtonChecked(*this, IDC_ONLYONE) == BST_CHECKED);
+                CRegStdDWORD nwrk(L"Software\\grepWinNP3\\MaxNumOfWorker", 1);
+                nwrk = nWorker;
             }
             CTheme::Instance().SetDarkTheme(IsDlgButtonChecked(*this, IDC_DARKMODE) == BST_CHECKED);
         }

@@ -2463,7 +2463,12 @@ DWORD CSearchDlg::SearchThread()
 
     std::unique_ptr<TCHAR[]> pathbuf(new TCHAR[MAX_PATH_NEW]);
 
+    DWORD const nMaxNumOfWorker = std::thread::hardware_concurrency() << 2;
+    DWORD const nWorker = max(min(bPortable ? g_iniFile.GetLongValue(L"global", L"MaxNumOfWorker", nMaxNumOfWorker >> 1) : 
+                          DWORD(CRegStdDWORD(L"Software\\grepWinNP3\\MaxNumOfWorker", nMaxNumOfWorker >> 1)), nMaxNumOfWorker), 1);
+
     s_SearchThreadMap.clear();
+    s_SearchThreadMap.set_max_worker(nWorker);
 
     // split the path string into single paths and
     // add them to an array

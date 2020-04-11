@@ -17,11 +17,10 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 //
 #pragma once
+#include <thread>
 #include <mutex>
 #include <future>
 #include <condition_variable>
-
-#define MAX_SEARCH_THREADS 64
 
 // ---------------------------------------
 // a semaphore class 
@@ -33,16 +32,30 @@ public:
     explicit Semaphore(unsigned int max_count = 1)
         : m_mtx()
         , m_cndvar()
-        , m_max(max_count > 0 ? max_count : 1)
+        , m_max(max_count > 1 ? max_count : 1)
         , m_count(m_max)
     {
+    }
+
+    inline void setmaxcount(unsigned int max_count)
+    {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        m_max = max_count > 1 ? max_count : 1;
+        while (m_count < m_max)
+        {
+            ++m_count;
+            m_cndvar.notify_one(); // notify the waiting thread
+        }
     }
 
     inline void notify()
     {
         std::unique_lock<std::mutex> lock(m_mtx);
-        ++m_count;
-        m_cndvar.notify_one(); // notify the waiting thread
+        if (m_count < m_max)
+        {
+            ++m_count;
+            m_cndvar.notify_one(); // notify the waiting thread
+        }
     }
 
     inline void wait()
@@ -65,7 +78,7 @@ public:
 private:    
     mutable std::mutex      m_mtx;
     std::condition_variable m_cndvar;
-    unsigned int const      m_max;
+    unsigned int            m_max;
     unsigned int            m_count;
 };
 
@@ -110,7 +123,12 @@ class SearchThreadMap
 {
 public:
 
-    SearchThreadMap() : m_semaphore(MAX_SEARCH_THREADS) { }
+    explicit SearchThreadMap(unsigned int max_count = 1) : m_semaphore(max_count) { }
+
+    inline void set_max_worker(unsigned int max_count)
+    {
+        m_semaphore.setmaxcount(max_count);
+    }
 
     inline void insert_ready(std::shared_ptr<CSearchInfo> sInfoPtr, int nFound)
     {
