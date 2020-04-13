@@ -475,8 +475,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_resizer.AddControl(hwndDlg, IDOK, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_GROUPSEARCHRESULTS, RESIZER_TOPLEFTBOTTOMRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_RESULTLIST, RESIZER_TOPLEFTBOTTOMRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_RESULTFILES, RESIZER_TOPLEFTRIGHT);
-            m_resizer.AddControl(hwndDlg, IDC_RESULTCONTENT, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_RESULTFILES, RESIZER_TOPLEFT);
+            m_resizer.AddControl(hwndDlg, IDC_RESULTCONTENT, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_SEARCHINFOLABEL, RESIZER_BOTTOMLEFTRIGHT);
 
             InitDialog(hwndDlg, IDI_GREPWIN);
