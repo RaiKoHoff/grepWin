@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "resource.h"
 #include "maxpath.h"
+#include "StringUtils.h"
 #include "BookmarksDlg.h"
 #include "NameDlg.h"
 #include "Theme.h"
@@ -75,10 +76,33 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
 
             WINDOWPLACEMENT wpl = { 0 };
             DWORD size = sizeof(wpl);
-            if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowposBookmarks"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
-                SetWindowPlacement(*this, &wpl);
+            if (bPortable)
+            {
+                std::wstring sPos = g_iniFile.GetValue(L"global", L"windowposBookmarks", L"");
+                if (!sPos.empty())
+                {
+                    auto read  = swscanf_s(sPos.c_str(), L"%d;%d;%d;%d;%d;%d;%d;%d;%d;%d",
+                                          &wpl.flags, &wpl.showCmd,
+                                          &wpl.ptMinPosition.x, &wpl.ptMinPosition.y,
+                                          &wpl.ptMaxPosition.x, &wpl.ptMaxPosition.y,
+                                          &wpl.rcNormalPosition.left, &wpl.rcNormalPosition.top,
+                                          &wpl.rcNormalPosition.right, &wpl.rcNormalPosition.bottom);
+                    wpl.length = size;
+                    if (read == 10)
+                        SetWindowPlacement(*this, &wpl);
+                    else
+                        ShowWindow(*this, SW_SHOW);
+                }
+                else
+                    ShowWindow(*this, SW_SHOW);
+            }
             else
-                ShowWindow(*this, SW_SHOW);
+            {
+                if (SHGetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowposBookmarks"), REG_NONE, &wpl, &size) == ERROR_SUCCESS)
+                    SetWindowPlacement(*this, &wpl);
+                else
+                    ShowWindow(*this, SW_SHOW);
+            }
     }
         return TRUE;
     case WM_COMMAND:
@@ -159,10 +183,22 @@ LRESULT CBookmarksDlg::DoCommand(int id, int /*msg*/)
         // fall through
     case IDCANCEL:
         {
-            WINDOWPLACEMENT wpl = { 0 };
-            wpl.length = sizeof(WINDOWPLACEMENT);
+            WINDOWPLACEMENT wpl = {0};
+            wpl.length          = sizeof(WINDOWPLACEMENT);
             GetWindowPlacement(*this, &wpl);
-            SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowposBookmarks"), REG_NONE, &wpl, sizeof(wpl));
+            if (bPortable)
+            {
+                auto sPos = CStringUtils::Format(L"%d;%d;%d;%d;%d;%d;%d;%d;%d;%d",
+                                                 wpl.flags, wpl.showCmd,
+                                                 wpl.ptMinPosition.x, wpl.ptMinPosition.y,
+                                                 wpl.ptMaxPosition.x, wpl.ptMaxPosition.y,
+                                                 wpl.rcNormalPosition.left, wpl.rcNormalPosition.top, wpl.rcNormalPosition.right, wpl.rcNormalPosition.bottom);
+                g_iniFile.SetValue(L"global", L"windowposBookmarks", sPos.c_str());
+            }
+            else
+            {
+                SHSetValue(HKEY_CURRENT_USER, _T("Software\\grepWinNP3"), _T("windowposBookmarks"), REG_NONE, &wpl, sizeof(wpl));
+            }
             if ((id == IDOK) && (ListView_GetNextItem(GetDlgItem(*this, IDC_BOOKMARKS), -1, LVNI_SELECTED) >= 0))
                 SendMessage(m_hParent, WM_BOOKMARK, 0, 0);
             ShowWindow(*this, SW_HIDE);
