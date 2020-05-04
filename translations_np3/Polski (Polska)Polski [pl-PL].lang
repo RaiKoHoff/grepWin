@@ -43,7 +43,7 @@ msgstr "%path% jest zastępowana ścieżką pliku, %line% z linią, aby przejś�
 
 #. Resource IDs: (119)
 msgid "&About grepWinNP3..."
-msgstr "&O grepWinNP3..."
+msgstr "&O programie grepWinNP3..."
 
 #. Resource IDs: (1049)
 msgid "&Replace"
@@ -63,7 +63,7 @@ msgstr "/"
 
 #. Resource IDs: (1052, 135)
 msgid "About grepWinNP3"
-msgstr "O grepWinNP3"
+msgstr "O programie grepWinNP3"
 
 #. Resource IDs: (1021)
 msgid "Add to Presets"
@@ -136,11 +136,11 @@ msgstr "Twórz zapasowe kopie plików w osobnym folderze"
 
 #. Resource IDs: (1064)
 msgid "Dark mode"
-msgstr ""
+msgstr "Tryb ciemny"
 
 #. Resource IDs: (159)
 msgid "Please enable dark mode first in the Windows system settings (>= Win10 v1803)."
-msgstr ""
+msgstr "Proszę najpierw włączyć tryb ciemny w ustawieniach systemu Windows (>= Win10 v1803)"
 
 #. Resource IDs: (139)
 msgid "Date modified"
@@ -160,7 +160,7 @@ msgstr "Kliknij dwukrotnie, aby wybrać predefiniowane ustawienie"
 
 #. Resource IDs: (65535 - PopupMenu)
 msgid "Dummy"
-msgstr "Dummy"
+msgstr "Pusty wyraz"
 
 #. Resource IDs: (1067)
 msgid "Editor"
@@ -184,7 +184,7 @@ msgstr "Wyklucz katalogi (Regex):"
 
 #. Resource IDs: (158)
 msgid "Ext"
-msgstr ""
+msgstr "Rozszerz."
 
 #. Resource IDs: (1039)
 msgid "File Names match:\nuse '|' to separate multiple text match patterns, prepen&d '-' to exclude"
@@ -421,8 +421,8 @@ msgid "The resulting text after replacing:"
 msgstr "Tekst wynikowy po zamianie:"
 
 #. Resource IDs: (1074)
-msgid "This adds a new entry to the context menu named \"Open with Editor\""
-msgstr "Spowoduje to dodanie nowego wpisu do menu kontekstowego o nazwie \"Otwórz za pomocą edytora""
+msgid "This adds a new entry to the context menu named 'Open with Editor'"
+msgstr "Spowoduje to dodanie nowego wpisu do menu kontekstowego o nazwie 'Otwórz za pomocą edytora""
 
 #. Resource IDs: (1053)
 msgid "Treat files as UTF-8"
@@ -489,8 +489,8 @@ msgid "no text to test with available"
 msgstr "brak tekstu do przetestowania z dostępnymi"
 
 #. Resource IDs: (112)
-msgid "only files that match this pattern are searched.\r\nUse ""|"" as the delimiter.\r\nExample: *.cpp|*.h"
-msgstr "Wyszukiwane są tylko pliki odpowiadające temu wzorcowi.\r\nJako separatora użyj ""|"" \r\nPrzykład: *.cpp|*."
+msgid "only files that match this pattern are searched.\nUse '|' as the delimiter.\nExample: *.cpp|*.h"
+msgstr "Wyszukiwane są tylko pliki odpowiadające temu wzorcowi.\nJako separatora użyj '|' \nPrzykład: *.cpp|*."
 
 #. Resource IDs: (129)
 msgid "read error"
@@ -514,17 +514,17 @@ msgid "search string is empty"
 msgstr "Ciąg wyszukiwania jest pusty"
 
 #. Resource IDs: (114)
-msgid "the path(s) which is searched recursively.\r\nSeparate paths with the | symbol.\r\nExample: c:\\temp|d:\\logs"
-msgstr "Ścieżka(-i), która(-e) jest(są) przeszukiwana(-e) regularnie.\r\nOddziel ścieżki za pomocą symbolu (pipe): | \r\nPrzykład: c:\\temp|d:\\logs"
+msgid "the path(s) which is searched recursively.\nSeparate paths with the '|' symbol.\nExample: c:\\temp|d:\\logs"
+msgstr "Ścieżka(-i), która(-e) jest(są) przeszukiwana(-e) regularnie.\nOddziel ścieżki za pomocą symbolu (pipe):'|'\nPrzykład: c:\\temp|d:\\logs"
 
 #. Resource IDs: (113)
-msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
-msgstr "Można wykluczyć katalogi, np. CVS i obrazy.\r\nPrzykład: ^(CVS|obrazy)$\r\nUwaga, foldery '.svn' są ukryte w Windows, więc zwykle nie są one skanowane."
+msgid "you can exclude directories, e.g. CVS and images.\nExample: ^(CVS|images)$\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
+msgstr "Można wykluczyć katalogi, np. CVS i obrazy.\nPrzykład: ^(CVS|obrazy)$\nUwaga, foldery '.svn' są ukryte w Windows, więc zwykle nie są one skanowane."
 
 #. Resource IDs: (1061)
 msgid "Reset"
-msgstr ""
+msgstr "Resetuj"
 
 #. Resource IDs: (1088)
 msgid "Max # of concurrent worker"
-msgstr ""
+msgstr "Maks. # jednoczesnych sesji"
