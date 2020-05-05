@@ -4,8 +4,8 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 "MIME-Version: 1.0\n"
-# Language: Swedish (Sweden) resources
-# Last-Translator: (sv-SE) Svensk översättning av ThreeLightsBeyond
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 #
 # encoding: UTF-8
 # Language: Afrikaans (South Africa) resources
@@ -35,6 +35,10 @@ msgstr ""
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
+msgstr ""
+
+#. Resource IDs: (160)
+msgid "Path does not exist or is not accessible!"
 msgstr ""
 
 #. Resource IDs: (1069)
@@ -139,7 +143,7 @@ msgid "Dark mode"
 msgstr ""
 
 #. Resource IDs: (159)
-msgid "Please enable dark mode first in the Windows system settings (>= Win10 v1803)."
+msgid "Dark Mode requires at least Win10 v1803, and it must be enabled in the Windows system settings."
 msgstr ""
 
 #. Resource IDs: (139)
