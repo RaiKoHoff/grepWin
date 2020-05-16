@@ -8,8 +8,8 @@
 "Content-Transfer-Encoding: 8bit\n"
 #
 # encoding: UTF-8
-# Language: Swedish (Sweden) resources
-# Last-Translator: (sv-SE) Svensk översättning av ThreeLightsBeyond
+# Language: Greek (Greece) resources
+# Last-Translator: (el-GR) Ελληνική μετάφραση από τον Petewg
 #
 
 #, fuzzy
@@ -35,7 +35,7 @@ msgstr ""
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
-msgstr "%ld fler träffar"
+msgstr "%ld περισσότερα ταιριάσματα"
 
 #. Resource IDs: (160)
 msgid "Path does not exist or is not accessible!"
@@ -43,188 +43,188 @@ msgstr ""
 
 #. Resource IDs: (1069)
 msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %pattern% with the search string."
-msgstr "%path% ersätts med sökväg till filen, %line% med raden att hoppa till, %pattern% med söksträngen."
+msgstr "Το %path% αντικαθίσταται με τη διαδρομή του αρχείου, το %line% με τη γραμμή μετάβασης"
 
 #. Resource IDs: (119)
 msgid "&About grepWinNP3..."
-msgstr "Om grepWinNP3"
+msgstr "&Πληροφορίες για το grepWinNP3..."
 
 #. Resource IDs: (1049)
 msgid "&Replace"
-msgstr "Ersätt"
+msgstr "&Αντικατάσταση"
 
 #. Resource IDs: (123)
 msgid "&Search"
-msgstr "Sök"
+msgstr "&Αναζήτηση"
 
 #. Resource IDs: (1013)
 msgid "..."
-msgstr "..."
+msgstr ""
 
 #. Resource IDs: (1061, 1063, 1064, 1066, 1067)
 msgid "/"
-msgstr "/"
+msgstr ""
 
 #. Resource IDs: (1052, 135)
 msgid "About grepWinNP3"
-msgstr "Om grepWinNP3"
+msgstr "Πληροφορίες για το grepWinNP3"
 
 #. Resource IDs: (1021)
 msgid "Add to Presets"
-msgstr "Lägg till favoriter"
+msgstr "Αποθήκευση regex"
 
 #. Resource IDs: (155)
 msgid "All Files"
-msgstr "Alla filer"
+msgstr "Όλα τα αρχεία"
 
 #. Resource IDs: (1078)
 msgid "All dates"
-msgstr "Alla datum"
+msgstr "Όλες οι ημερομηνίες"
 
 #. Resource IDs: (1005)
 msgid "All sizes"
-msgstr "Alla storlekar"
+msgstr "Όλα τα μεγέθη"
 
 #. Resource IDs: (124)
 #, c-format
 msgid "Are you sure you want to replace\n%s\nwith\n%s\nwithout creating backups?"
-msgstr "Är du säker du vill ersätta \n%s\nmed\n%s\nutan att skapa säkerhetskopior?"
+msgstr "Είστε βέβαιοι για την αντικατάσταση του\n%s\nμε\n%s\nχωρίς δημιουργία αντιγράφου?"
 
 #. Resource IDs: (1081)
 msgid "Between"
-msgstr "Mellan"
+msgstr "Μεταξύ"
 
 #. Resource IDs: (2)
 msgid "Cancel"
-msgstr "Avbryt"
+msgstr "Άκυρο"
 
 #. Resource IDs: (1068)
 msgid "Command line to start an editor at a specific line:"
-msgstr "Kommando för att starta editor på en secifik rad:"
+msgstr "Εντολή για έναρξη του επεξεργαστή κειμένου σε συγκεκριμένη γραμμή:"
 
 #. Resource IDs: (1060)
 msgid "Content"
-msgstr "Innehåll"
+msgstr "Περιεχόμενο"
 
 #. Resource IDs: (145)
 msgid "Copy filename to clipboard"
-msgstr "Kopiera filnamn till urklipp"
+msgstr "Αντιγραφή ονόματος αρχείου στο πρόχειρο"
 
 #. Resource IDs: (146)
 msgid "Copy filenames to clipboard"
-msgstr "Kopiera filnamn till urklipp"
+msgstr "Αντιγραφή ονομάτων αρχείων στο πρόχειρο"
 
 #. Resource IDs: (143)
 msgid "Copy path to clipboard"
-msgstr "Kopiera sökväg till urklipp"
+msgstr "Αντιγραφή ονόματος καταλόγου στο πρόχειρο"
 
 #. Resource IDs: (144)
 msgid "Copy paths to clipboard"
-msgstr "Kopiera sökvägar till urklipp"
+msgstr "Αντιγραφή ονομάτων καταλόγων στο πρόχειρο"
 
 #. Resource IDs: (147)
 msgid "Copy text result to clipboard"
-msgstr "Kopiera textresultat till urklipp"
+msgstr "Αντιγραφή αποτελέσματος στο πρόχειρο"
 
 #. Resource IDs: (148)
 msgid "Copy text results to clipboard"
-msgstr "Kopiera textresultat till urklipp"
+msgstr "Αντιγραφή αποτελεσμάτων στο πρόχειρο"
 
 #. Resource IDs: (1029)
 msgid "Create backup files"
-msgstr "Kopiera säkerhetskopior"
+msgstr "Δημιουργία backup"
 
 #. Resource IDs: (1077)
 msgid "Create backup files in a separate folder"
-msgstr "Kopiera säkerhetskopior i separat mapp"
+msgstr "Δημιουργία αντιγράφων αρχείων σε ξεχωριστό φάκελο"
 
 #. Resource IDs: (1064)
 msgid "Dark mode"
-msgstr "Mörkt läge"
+msgstr ""
 
 #. Resource IDs: (159)
 msgid "Dark Mode requires at least Win10 v1803, and it must be enabled in the Windows system settings."
-msgstr "Aktivera mörkt läge i Windows syteminställningar (>= Win10 v1803)."
+msgstr ""
 
 #. Resource IDs: (139)
 msgid "Date modified"
-msgstr "Datum modifierad"
+msgstr "Ημερ/νία τροποποίησης"
 
 #. Resource IDs: (137)
 msgid "Dialog"
-msgstr "Dialogruta"
+msgstr "Παράθυρο διαλόγου"
 
 #. Resource IDs: (1051)
 msgid "Dot matches newline"
-msgstr "Punkt matchar nyrad"
+msgstr "Η τελεία αντιστοιχεί σε νέα γραμμή"
 
 #. Resource IDs: (1056)
 msgid "Double-Click to select a preset"
-msgstr "Dubbelklicka för att välja en förinställd inställning"
+msgstr "Διπλό-κλίκ για επιλογή αποθηκευμένου"
 
 #. Resource IDs: (65535 - PopupMenu)
 msgid "Dummy"
-msgstr "Dummy"
+msgstr "Ψεύτικο"
 
 #. Resource IDs: (1067)
 msgid "Editor"
-msgstr "Editor"
+msgstr "Επεξεργαστής κειμένου"
 
 #. Resource IDs: (138)
 msgid "Encoding"
-msgstr "Teckenkodning"
+msgstr "Κωδικοσελίδα"
 
 #. Resource IDs: (1056)
 msgid "Enter a name for the regex:"
-msgstr "Ange ett namn för regex:"
+msgstr "Δώστε ένα όνομα για το regex:"
 
 #. Resource IDs: (1062)
 msgid "Escape key closes grepWinNP3"
-msgstr "Esc-tangenten stänger grepWinNP3"
+msgstr "Το πλήκτρο Escape τερματίζει το grepWinNP3"
 
 #. Resource IDs: (1041)
 msgid "Exclude dirs (Regex):"
-msgstr "Exkludera mappar (Regex):"
+msgstr "Εξαιρούμενοι κατάλογοι (Regex):"
 
 #. Resource IDs: (158)
 msgid "Ext"
-msgstr "Ext"
+msgstr ""
 
 #. Resource IDs: (1039)
 msgid "File Names match:\nuse '|' to separate multiple text match patterns, prepen&d '-' to exclude"
-msgstr "Filnamn matchar:\nanvänd '|' för att separera multipla textmatchningsmönster, lägg till '-' i början för att exkludera"
+msgstr "Μάσκα ονομάτων αρχείων:\nχρήση του '|' για χωρισμό πολλαπλών μασκών, πρόθεμα '-' για εξαίρεση"
 
 #. Resource IDs: (1059)
 msgid "Files"
-msgstr "Filer"
+msgstr "Αρχεία"
 
 #. Resource IDs: (109)
 msgid "GREPWINNP3"
-msgstr "GREPWINNP3"
+msgstr ""
 
 #. Resource IDs: (156)
 msgid "If enabled, a backup folder is created inside the folder that's searched/replaced in, and the files are backed up into that folder"
-msgstr "En mapp med en säkerhetskopia skapas innuti mappen du söker i, och filer säkerhetskopieras skapas för filerna till denna mapp"
+msgstr "Εάν είναι ενεργοποιημένο, δημιουργείται ένας εφεδρικός φάκελος μέσα στον φάκελο στον οποίο γίνεται αναζήτηση/αντικατάσταση και δημιουργούνται αντίγραφα ασφαλείας σε αυτόν τον φάκελο"
 
 #. Resource IDs: (1050)
 msgid "Include binary files"
-msgstr "Inkludera binära filer"
+msgstr "Δυαδικά αρχεία"
 
 #. Resource IDs: (1010)
 msgid "Include hidden items"
-msgstr "Inkludera gömda filer"
+msgstr "Κρυφά αρχεία"
 
 #. Resource IDs: (1011)
 msgid "Include subfolders"
-msgstr "Inkludera undermappar"
+msgstr "Υποκατάλογοι"
 
 #. Resource IDs: (1009)
 msgid "Include system items"
-msgstr "Inkludera systemfiler"
+msgstr "Αρχεία συστήματος"
 
 #. Resource IDs: (153)
 msgid "Invalid path!"
-msgstr "Ogiltig mapp!"
+msgstr "Μη έγκυρη διαδρομή!"
 
 #. Resource IDs: (1019)
 msgid "KB"
@@ -232,36 +232,36 @@ msgstr "KB"
 
 #. Resource IDs: (1075)
 msgid "Language:"
-msgstr "Språk:"
+msgstr "Γλώσσα:"
 
 #. Resource IDs: (1017)
 msgid "Limit search"
-msgstr "Begränsa sökning"
+msgstr "Περιορισμός αναζήτησης"
 
 #. Resource IDs: (134)
 msgid "Line"
-msgstr "Rad"
+msgstr "Γραμμή"
 
 #. Resource IDs: (150)
 #, c-format
 msgid "Line %5ld : %30s\n"
-msgstr "Rad %5ld : %30s\n"
+msgstr "Γραμμή %5ld : %30s\n"
 
 #. Resource IDs: (135)
 msgid "Matches"
-msgstr "Träffar"
+msgstr "Ταιριάσματα"
 
 #. Resource IDs: (104)
 msgid "Name"
-msgstr "Namn"
+msgstr "Όνομα"
 
 #. Resource IDs: (1079)
 msgid "Newer than"
-msgstr "Nyare än"
+msgstr "Νεώτερο από"
 
 #. Resource IDs: (115)
 msgid "Newline is matched by '.'"
-msgstr "Nyrad matchar med '.'"
+msgstr "Νέα γραμμή αντιστοιχίζεται με '.'"
 
 #. Resource IDs: (1)
 msgid "OK"
@@ -269,266 +269,266 @@ msgstr "OK"
 
 #. Resource IDs: (1080)
 msgid "Older than"
-msgstr "Äldre än"
+msgstr "Παλαιότερο από"
 
 #. Resource IDs: (1063)
 msgid "Only one instance"
-msgstr "Bara en instans"
+msgstr "Μόνο μία εμφάνιση"
 
 #. Resource IDs: (142)
 msgid "Open containing folder"
-msgstr "Öppna innehållande mapp"
+msgstr "Άνοιγμα περιέχοντος φακέλου"
 
 #. Resource IDs: (141)
 msgid "Open with Editor"
-msgstr "Öppna med editor"
+msgstr "Άνοιγμα με επεξεργαστή κειμένου"
 
 #. Resource IDs: (1056)
 msgid "Paste text to test the regex with:"
-msgstr ""
+msgstr "Επικολήστε κείμενο δοκιμής του regex:"
 
 #. Resource IDs: (137)
 msgid "Path"
-msgstr "Sökväg"
+msgstr "Διαδρομή"
 
 #. Resource IDs: (131)
 msgid "Preset name"
-msgstr "Förvalt namn"
+msgstr "Προκαθορισμένο όνομα"
 
 #. Resource IDs: (1022, 132)
 msgid "Presets"
-msgstr "Förval"
-
+msgstr "Αποθηκευμένα"
+        
 #. Resource IDs: (1065)
 msgid "Press F1 for help"
-msgstr "Tryck in F1 för hjälp"
+msgstr "Πιέστε F1 για βοήθεια"
 
 #. Resource IDs: (154)
 msgid "Programs"
-msgstr "Program"
+msgstr "Εφαρμογές"
 
 #. Resource IDs: (32775 - Menu)
 msgid "Re&name Preset"
-msgstr "Byt namn på förval"
+msgstr "Μετονομασία προεπιλογής"
 
 #. Resource IDs: (130)
 msgid "Regex Test"
-msgstr "Regex Test"
+msgstr "Δοκιμή του regex"
 
 #. Resource IDs: (1046)
 msgid "Regex match"
-msgstr "Regex träff"
+msgstr "Regex match"
 
 #. Resource IDs: (65535)
 msgid "Regex replace string:"
-msgstr "Regex ersätt sträng:"
+msgstr "Regex συμβολοσειρά αντικατάστασης:"
 
 #. Resource IDs: (1001)
 msgid "Regex search"
-msgstr "Regex sökning"
+msgstr "Εύρεση Regex"
 
 #. Resource IDs: (65535)
 msgid "Regex search string:"
-msgstr "Regex söksträng:"
+msgstr "Regex συμβολοσειρά αναζήτησης:"
 
 #. Resource IDs: (152)
 msgid "Relative paths are not allowed. Please enter an absolute path!"
-msgstr "Relativ sökväg är inte tillåten. Var vänlig ange en absolut sökväg!"
+msgstr "Δεν επιτρέπονται σχετικές διαδρομές. Εισαγάγετε μια απόλυτη διαδρομή!"
 
 #. Resource IDs: (32771 - Menu)
 msgid "Remo&ve Preset"
-msgstr "Ta bort förval"
+msgstr "Διαγραφή προεπιλογής"
 
 #. Resource IDs: (106)
 msgid "Replace string"
-msgstr "Ersätt sträng"
+msgstr "Συμβολοσειρά αντικατάστασης"
 
 #. Resource IDs: (1027)
 msgid "Replace with:"
-msgstr "Ersätt med:"
+msgstr "Αντικατάσταση με:"
 
 #. Resource IDs: (126)
 msgid "S&top"
-msgstr "Avsluta"
+msgstr "Διακοπή"
 
 #. Resource IDs: (1, 1016)
 msgid "Search"
-msgstr "Sök"
+msgstr "Αναζήτηση"
 
 #. Resource IDs: (1026)
 msgid "Search &for:"
-msgstr "Sök efter:"
+msgstr "Αναζήτηση για:"
 
 #. Resource IDs: (1042)
 msgid "Search case-sensitive"
-msgstr "Skiftlägeskänslig sökning"
+msgstr "Διάκριση πεζών-κεφαλαίων"
 
 #. Resource IDs: (1015)
 msgid "Search in"
-msgstr "Sök i"
+msgstr "Αναζήτηση σε"
 
 #. Resource IDs: (1018)
 msgid "Search results"
-msgstr "Sökresultat"
+msgstr "Ευρήματα"
 
 #. Resource IDs: (105)
 msgid "Search string"
-msgstr "Sök sträng"
+msgstr "Συμβολοσειρά αναζήτησης"
 
 #. Resource IDs: (128)
 #, c-format
 msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "Sök %ld filer, hoppade över %ld filer. Hittade %ld träffar i %ld filer."
+msgstr "Ερευνήθηκαν %ld αρχεία, παραβλέφτηκαν %ld αρχεία. Βρέθηκαν %ld αντιστοιχίσεις σε %ld αρχεία."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
-msgstr "Välj editor ..."
+msgstr "Επιλέξτε επεξεργαστή κειμένου ..."
 
 #. Resource IDs: (127)
 msgid "Select path to search"
-msgstr "Välj mapp att söka i"
+msgstr "Επιλέξτε διαδρομή για έρευνα"
 
 #. Resource IDs: (1071)
 msgid "Settings"
-msgstr "Inställningar"
+msgstr "Ρυθμίσεις"
 
 #. Resource IDs: (133)
 msgid "Size"
-msgstr "Storlek"
+msgstr "Μέγεθος"
 
 #. Resource IDs: (1006)
 msgid "Size is"
-msgstr "Storlek är"
+msgstr "Μέγεθος"
 
 #. Resource IDs: (1028)
 msgid "Test regex"
-msgstr "Testa regex"
+msgstr "Δοκιμή regex"
 
 #. Resource IDs: (136)
 msgid "Text"
-msgstr "Text"
+msgstr "Κείμενο"
 
 #. Resource IDs: (1048)
 msgid "Text match"
-msgstr "Textträffar"
+msgstr "Text match"
 
 #. Resource IDs: (1002)
 msgid "Text search"
-msgstr "Textsökning"
+msgstr "Εύρεση κειμένου"
 
 #. Resource IDs: (65535)
 msgid "The regex search string matches:"
-msgstr "Regex sökning matchar:"
+msgstr "Η regex συμβολοσειρά αναζήτησης ταιριάζει:»
 
 #. Resource IDs: (65535)
 msgid "The resulting text after replacing:"
-msgstr "Text efter ersättning:"
+msgstr "Το προκύπτον κείμενο μετά την αντικατάσταση:"
 
 #. Resource IDs: (1074)
 msgid "This adds a new entry to the context menu named 'Open with Editor'"
-msgstr "Lägger till ny post i snabbmenyn med rubriken 'Öppna med editor'"
+msgstr "Αυτό προσθέτει ένα νέο στοιχείο στο μενού που ονομάζεται \"Ανοιγμα με επεξεργαστή κειμένου\""
 
 #. Resource IDs: (1053)
 msgid "Treat files as UTF-8"
-msgstr "Behandlar filer som UTF-8"
+msgstr "Αντιμετώπιση αρχείων ως UTF8"
 
 #. Resource IDs: (1045)
 msgid "Visit our website"
-msgstr "Besök vår webbsida"
+msgstr "Επίσκεψη ιστοσελίδας"
 
 #. Resource IDs: (116)
 msgid "a regular expression used for searching. Press F1 for more info."
-msgstr "ett reguljärt uttryck använt för sökning. Tryck F1 för mer information."
+msgstr "ένα regex ή κείμενο που θα χρησιμοποιηθεί για αναζήτηση. Πατήστε F1 για βοήθεια."
 
 #. Resource IDs: (125)
 msgid "an empty string"
-msgstr "En tom sträng"
+msgstr "κενή συμβολοσειρά"
 
 #. Resource IDs: (130)
 msgid "binary"
-msgstr "binär"
+msgstr "δυαδικό"
 
 #. Resource IDs: (118)
 msgid "click to edit the text as a multiline text"
-msgstr "klicka för att redigera text som multiradstext"
+msgstr "κάντε κλικ για να επεξεργαστείτε το κείμενο ως κείμενο πολλαπλών γραμμών"
 
 #. Resource IDs: (121)
 msgid "equal to"
-msgstr "lika med"
+msgstr "ίσον με"
 
 #. Resource IDs: (122)
 msgid "greater than"
-msgstr "större än"
+msgstr "μεγαλλίτερο από"
 
 #. Resource IDs: (103, 129)
 msgid "grepWinNP3"
-msgstr "grepWinNP3"
+msgstr ""
 
 #. Resource IDs: (138)
 msgid "grepWinNP3 Settings"
-msgstr "grepWinNP3 inställningar"
+msgstr "ρυθμίσεις grepWinNP3"
 
 #. Resource IDs: (157)
 msgid "hold down the shift key to find files that DO NOT contain the search string"
-msgstr "håll ner shift-tangenten för att hitta filer som inte innhåller söksträngen"
+msgstr "tieni premuto il tasto \"Maiusc\" per trovare i file che NON contengono la stringa di ricerca"
 
 #. Resource IDs: (132)
 msgid "invalid regex!"
-msgstr "felaktig rexex!"
+msgstr "με έγκυρο regex!"
 
 #. Resource IDs: (120)
 msgid "less than"
-msgstr "mindre än"
+msgstr "μικρότερο από"
 
 #. Resource IDs: (111)
 msgid "no match"
-msgstr "ingen träff"
+msgstr "κανένα ταίριασμα"
 
 #. Resource IDs: (110)
 msgid "no text to replace with"
-msgstr "ingen text att ersätta med"
+msgstr "κανένα κείμενο προς αντικατάσταση"
 
 #. Resource IDs: (107)
 msgid "no text to test with available"
-msgstr "ingen text att testa med"
+msgstr "κανένα κείμενο για δοκιμή"
 
 #. Resource IDs: (112)
 msgid "only files that match this pattern are searched.\nUse '|' as the delimiter.\nExample: *.cpp|*.h"
-msgstr "söker bara efter filer som matchar detta mönster.\nAnvänd '|' som avgränsare.\nExempelvis: *.cpp|*.h"
+msgstr "αναζητούνται μόνο αρχεία που ταιριάζουν με αυτό το μοτίβο.\nΧρήση του \"|\" ως διαχωριστικό.\r\nΠαράδειγμα: *.cpp|*.h"
 
 #. Resource IDs: (129)
 msgid "read error"
-msgstr "läsfel"
+msgstr "σφάλμα ανάγνωσης"
 
 #. Resource IDs: (131)
 msgid "regex ok"
-msgstr "regex ok"
+msgstr "regex εντάξει"
 
 #. Resource IDs: (117)
 msgid "reuse grepWinNP3 instances."
-msgstr "återanvänd grepWinNP3-instanser."
+msgstr "επαναχρησιμοποίηση παρουσιών grepWinNP3."
 
 #. Resource IDs: (151)
 #, c-format
 msgid "scanning file '%s'"
-msgstr "söker i filen '%s'"
+msgstr "σάρωση του αρχείου '%s'"
 
 #. Resource IDs: (108)
 msgid "search string is empty"
-msgstr "söksträngen är tom"
+msgstr "η συμβολοσειρά αναζήτησης είναι κενή"
 
 #. Resource IDs: (114)
 msgid "the path(s) which is searched recursively.\nSeparate paths with the '|' symbol.\nExample: c:\\temp|d:\\logs"
-msgstr "sökväg(arna) söks rekursivt.\nSeparera sökvägar med '|' symbolen.\nExempelvis: c:\\temp|d:\\logs"
+msgstr "διαδρομές που αναζητούνται διαδοχικά. \r\nΧρήση του \"|\" ως διαχωριστικό.\r\nΠαράδειγμα: c:\\temp|d:\\logs"
 
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\nExample: ^(CVS|images)$\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
-msgstr "du kan exkludera mappar, exempelvis CVS och bilder.\nExempelvis: ^(CVS|bilder)$\nMärk,, '.svn'-mappar are är dolda i Windows, så de är vanligtvis inte sökta i."
+msgstr "μπορείτε να εξαιρέσετε καταλόγους, π.χ. CVS και εικόνες.\r\nΠαράδειγμα: ^(CVS|images)$\r\nΣημείωση, οι φάκελοι '.svn' είναι 'κρυφοί' στα Windows, επομένως συνήθως δεν σαρώνονται."
 
 #. Resource IDs: (1061)
 msgid "Reset"
-msgstr "Återställ"
+msgstr ""
 
 #. Resource IDs: (1088)
 msgid "Max # of concurrent worker"
-msgstr "Maximalt # samtidiga instanser"
+msgstr ""
