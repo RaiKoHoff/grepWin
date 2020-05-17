@@ -173,6 +173,19 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
     {
         case WM_INITDIALOG:
         {
+            SHAutoComplete(GetDlgItem(*this, IDC_SEARCHPATH), SHACF_FILESYSTEM | SHACF_AUTOSUGGEST_FORCE_ON);
+
+            m_AutoCompleteFilePatterns.Load(_T("Software\\grepWin\\History"), _T("FilePattern"));
+            m_AutoCompleteFilePatterns.Init(GetDlgItem(hwndDlg, IDC_PATTERN));
+            m_AutoCompleteExcludeDirsPatterns.Load(_T("Software\\grepWin\\History"), _T("ExcludeDirsPattern"));
+            m_AutoCompleteExcludeDirsPatterns.Init(GetDlgItem(hwndDlg, IDC_EXCLUDEDIRSPATTERN));
+            m_AutoCompleteSearchPatterns.Load(_T("Software\\grepWin\\History"), _T("SearchPattern"));
+            m_AutoCompleteSearchPatterns.Init(GetDlgItem(hwndDlg, IDC_SEARCHTEXT));
+            m_AutoCompleteReplacePatterns.Load(_T("Software\\grepWin\\History"), _T("ReplacePattern"));
+            m_AutoCompleteReplacePatterns.Init(GetDlgItem(hwndDlg, IDC_REPLACETEXT));
+            m_AutoCompleteSearchPaths.Load(_T("Software\\grepWin\\History"), _T("SearchPaths"));
+            m_AutoCompleteSearchPaths.Init(GetDlgItem(hwndDlg, IDC_SEARCHPATH));
+
             m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback(
                 [this]() {
                     auto bDark = CTheme::Instance().IsDarkTheme();
@@ -259,18 +272,6 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_pDropTarget->AddSuportedFormat(ftetc);
             ftetc.cfFormat = CF_HDROP;
             m_pDropTarget->AddSuportedFormat(ftetc);
-            SHAutoComplete(GetDlgItem(*this, IDC_SEARCHPATH), SHACF_FILESYSTEM | SHACF_AUTOSUGGEST_FORCE_ON);
-
-            m_AutoCompleteFilePatterns.Load(_T("Software\\grepWin\\History"), _T("FilePattern"));
-            m_AutoCompleteFilePatterns.Init(GetDlgItem(hwndDlg, IDC_PATTERN));
-            m_AutoCompleteExcludeDirsPatterns.Load(_T("Software\\grepWin\\History"), _T("ExcludeDirsPattern"));
-            m_AutoCompleteExcludeDirsPatterns.Init(GetDlgItem(hwndDlg, IDC_EXCLUDEDIRSPATTERN));
-            m_AutoCompleteSearchPatterns.Load(_T("Software\\grepWin\\History"), _T("SearchPattern"));
-            m_AutoCompleteSearchPatterns.Init(GetDlgItem(hwndDlg, IDC_SEARCHTEXT));
-            m_AutoCompleteReplacePatterns.Load(_T("Software\\grepWin\\History"), _T("ReplacePattern"));
-            m_AutoCompleteReplacePatterns.Init(GetDlgItem(hwndDlg, IDC_REPLACETEXT));
-            m_AutoCompleteSearchPaths.Load(_T("Software\\grepWin\\History"), _T("SearchPaths"));
-            m_AutoCompleteSearchPaths.Init(GetDlgItem(hwndDlg, IDC_SEARCHPATH));
 
             m_editFilePatterns.Subclass(hwndDlg, IDC_PATTERN);
             m_editExcludeDirsPatterns.Subclass(hwndDlg, IDC_EXCLUDEDIRSPATTERN);
@@ -372,7 +373,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             {
                 if (bPortable)
                 {
-                    m_showContent = wcscmp(g_iniFile.GetValue(L"global", L"showcontent", L"0"), L"0") == 0;
+                    m_showContent = _wtoi(g_iniFile.GetValue(L"global", L"showcontent", L"0")) != 0;
                 }
                 else
                 {
@@ -762,6 +763,8 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 if (!SaveSettings())
                     break;
 
+                CStringUtils::rtrim(m_searchpath, L"\\/");
+
                 if (PathIsRelative(m_searchpath.c_str()))
                 {
                     ShowEditBalloon(IDC_SEARCHPATH, TranslatedString(hResource, IDS_ERR_INVALID_PATH).c_str(), TranslatedString(hResource, IDS_ERR_RELATIVEPATH).c_str());
@@ -806,12 +809,16 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
 
                 if (m_bReplace && (!m_bCreateBackup || m_replaceString.empty()) && m_bConfirmationOnReplace)
                 {
-                    auto msgtext = CStringUtils::Format((LPCWSTR)TranslatedString(hResource, IDS_REPLACECONFIRM).c_str(),
-                                                        m_searchString.c_str(),
-                                                        m_replaceString.empty() ? (LPCWSTR)TranslatedString(hResource, IDS_ANEMPTYSTRING).c_str() : m_replaceString.c_str());
-                    if (::MessageBox(*this, msgtext.c_str(), _T("grepWin"), MB_ICONQUESTION | MB_YESNO) != IDYES)
+                    auto nowarnifnobackup = bPortable ? !!_wtoi(g_iniFile.GetValue(L"settings", L"nowarnifnobackup", L"0")) : DWORD(CRegStdDWORD(L"Software\\grepWin\\nowarnifnobackup", FALSE));
+                    if (!nowarnifnobackup)
                     {
-                        break;
+                        auto msgtext = CStringUtils::Format((LPCWSTR)TranslatedString(hResource, IDS_REPLACECONFIRM).c_str(),
+                            m_searchString.c_str(),
+                            m_replaceString.empty() ? (LPCWSTR)TranslatedString(hResource, IDS_ANEMPTYSTRING).c_str() : m_replaceString.c_str());
+                        if (::MessageBox(*this, msgtext.c_str(), _T("grepWin"), MB_ICONQUESTION | MB_YESNO) != IDYES)
+                        {
+                            break;
+                        }
                     }
                 }
                 m_bConfirmationOnReplace = true;
@@ -1702,15 +1709,29 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                             swprintf_s(pItem->pszText, pItem->cchTextMax, L"%lld", pInfo->matchcount);
                         break;
                     case 3: // path
-                        wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(0, pInfo->filepath.size() - pInfo->filepath.substr(pInfo->filepath.find_last_of('\\') + 1).size() - 1).c_str(), pItem->cchTextMax - 1);
+                        if (m_searchpath.find('|') != std::wstring::npos)
+                            wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(0, pInfo->filepath.size() - pInfo->filepath.substr(pInfo->filepath.find_last_of('\\')).size()).c_str(), pItem->cchTextMax - 1);
+                        else
+                        {
+                            auto filepart = pInfo->filepath.substr(pInfo->filepath.find_last_of('\\'));
+                            auto len = pInfo->filepath.size() - m_searchpath.size() - filepart.size();
+                            if (len > 0)
+                                --len;
+                            wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(m_searchpath.size() + 1, len).c_str(), pItem->cchTextMax - 1);
+                        }
                         break;
                     case 4: // extension of the file
                     {
-                        auto dotpos = pInfo->filepath.find_last_of('.');
-                        if (dotpos != std::wstring::npos)
-                            wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(dotpos + 1).c_str(), pItem->cchTextMax - 1);
-                        else
-                            pItem->pszText[0] = 0;
+                        pItem->pszText[0] = 0;
+                        if (!pInfo->folder)
+                        {
+                            auto dotpos = pInfo->filepath.find_last_of('.');
+                            if (dotpos != std::wstring::npos)
+                            {
+                                if (pInfo->filepath.find('\\', dotpos) == std::wstring::npos)
+                                    wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filepath.substr(dotpos + 1).c_str(), pItem->cchTextMax - 1);
+                            }
+                        }
                     }
                     break;
                     case 5: // encoding
@@ -2345,6 +2366,7 @@ DWORD CSearchDlg::SearchThread()
                 }
                 found = s.find_first_of('\\', found + 1);
             }
+            CStringUtils::rtrim(s, L"\\/");
             pathvector.push_back(s);
         }
         pBufSearchPath += pos;
@@ -2578,6 +2600,57 @@ DWORD CSearchDlg::SearchThread()
     PostMessage(m_hwnd, WM_GREPWIN_THREADEND, 0, 0);
 
     return 0L;
+}
+
+void CSearchDlg::SetPreset(const std::wstring& preset)
+{
+    CBookmarks bookmarks;
+    bookmarks.Load();
+    auto bk = bookmarks.GetBookmark(preset);
+    if (bk.Name == preset)
+    {
+        auto RemoveQuotes = [](std::wstring& str) {
+            if (!str.empty())
+            {
+                if (str[0] == '"')
+                    str = str.substr(1);
+                if (!str.empty())
+                {
+                    if (str[str.size() - 1] == '"')
+                        str = str.substr(0, str.size() - 1);
+                }
+            }
+        };
+        m_searchString            = bk.Search;
+        m_replaceString           = bk.Replace;
+        m_bUseRegex               = bk.UseRegex;
+        m_bCaseSensitive          = bk.CaseSensitive;
+        m_bDotMatchesNewline      = bk.DotMatchesNewline;
+        m_bCreateBackup           = bk.Backup;
+        m_bUTF8                   = bk.Utf8;
+        m_bIncludeSystem          = bk.IncludeSystem;
+        m_bIncludeSubfolders      = bk.IncludeFolder;
+        m_bIncludeHidden          = bk.IncludeHidden;
+        m_bIncludeBinary          = bk.IncludeBinary;
+        m_excludedirspatternregex = bk.ExcludeDirs;
+        m_patternregex            = bk.FileMatch;
+        m_bUseRegexForPaths       = bk.FileMatchRegex;
+
+        m_bIncludeSystemC         = true;
+        m_bIncludeHiddenC         = true;
+        m_bIncludeSubfoldersC     = true;
+        m_bIncludeBinaryC         = true;
+        m_bCreateBackupC          = true;
+        m_bCreateBackupInFoldersC = true;
+        m_bUTF8C                  = true;
+        m_bCaseSensitiveC         = true;
+        m_bDotMatchesNewlineC     = true;
+
+        RemoveQuotes(m_searchString);
+        RemoveQuotes(m_replaceString);
+        RemoveQuotes(m_excludedirspatternregex);
+        RemoveQuotes(m_patternregex);
+    }
 }
 
 bool CSearchDlg::MatchPath(LPCTSTR pathbuf)
