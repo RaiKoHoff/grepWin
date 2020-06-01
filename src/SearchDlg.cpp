@@ -71,6 +71,7 @@ UINT                    CSearchDlg::GREPWIN_STARTUPMSG = RegisterWindowMessage(_
 std::map<size_t, DWORD> linepositions;
 
 extern ULONGLONG g_startTime;
+extern HANDLE    hInitProtection;
 
 CSearchDlg::CSearchDlg(HWND hParent)
     : m_searchedItems(0)
@@ -161,12 +162,14 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
     UNREFERENCED_PARAMETER(lParam);
     if (uMsg == GREPWIN_STARTUPMSG)
     {
-        if ((GetTickCount64() - 2000) < g_startTime)
+        if ((GetTickCount64() - 4000) < g_startTime)
         {
-            g_startTime = GetTickCount64();
+            if (wParam == 0)
+                g_startTime = GetTickCount64();
             return TRUE;
         }
-        g_startTime = GetTickCount64();
+        if (wParam == 0)
+            g_startTime = GetTickCount64();
         return FALSE;
     }
     switch (uMsg)
@@ -493,6 +496,11 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                     ShowWindow(*this, SW_SHOW);
             }
             InitResultList();
+
+            if (hInitProtection)
+                CloseHandle(hInitProtection);
+            hInitProtection = nullptr;
+
             switch (m_ExecuteImmediately)
             {
                 case Search:
@@ -770,10 +778,15 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     ShowEditBalloon(IDC_SEARCHPATH, TranslatedString(hResource, IDS_ERR_INVALID_PATH).c_str(), TranslatedString(hResource, IDS_ERR_RELATIVEPATH).c_str());
                     break;
                 }
-                if (!PathFileExists(m_searchpath.c_str()))
+                std::vector<std::wstring> searchpaths;
+                stringtok(searchpaths, m_searchpath, true);
+                for (const auto& sp : searchpaths)
                 {
-                    ShowEditBalloon(IDC_SEARCHPATH, TranslatedString(hResource, IDS_ERR_INVALID_PATH).c_str(), TranslatedString(hResource, IDS_ERR_PATHNOTEXIST).c_str());
-                    break;
+                    if (!PathFileExists(sp.c_str()))
+                    {
+                        ShowEditBalloon(IDC_SEARCHPATH, TranslatedString(hResource, IDS_ERR_INVALID_PATH).c_str(), TranslatedString(hResource, IDS_ERR_PATHNOTEXIST).c_str());
+                        break;
+                    }
                 }
 
                 m_searchedItems = 0;

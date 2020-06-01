@@ -33,19 +33,6 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
-# msgid/msgstr fields for Accelerator keys
-# Format is: "ID:xxxxxx:VACS+X" where:
-#    ID:xxxxx = the menu ID corresponding to the accelerator
-#    V = Virtual key (or blank if not used) - nearly always set!
-#    A = Alt key     (or blank if not used)
-#    C = Ctrl key    (or blank if not used)
-#    S = Shift key   (or blank if not used)
-#    X = upper case character
-# e.g. "V CS+Q" == Ctrl + Shift + 'Q'
-# ONLY Accelerator Keys with corresponding alphanumeric characters can be
-# updated i.e. function keys (F2), special keys (Delete, HoMe) etc. will not.
-# ONLY change the msgstr field. Do NOT change any other.
-# If you do not want to change an Accelerator Key, copy msgid to msgstr
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
@@ -159,6 +146,10 @@ msgstr "更新日時"
 #. Resource IDs: (137)
 msgid "Dialog"
 msgstr "ダイアログ"
+
+#. Resource IDs: (1078)
+msgid "Don't warn when replacing without creating backups"
+msgstr ""
 
 #. Resource IDs: (1051)
 msgid "Dot matches newline"
@@ -296,6 +287,10 @@ msgstr "貼り付けたテキストで正規表現をテスト:"
 #. Resource IDs: (137)
 msgid "Path"
 msgstr "パス"
+
+#. Resource IDs: (160)
+msgid "Path does not exist or is not accessible!"
+msgstr ""
 
 #. Resource IDs: (131)
 msgid "Preset name"
@@ -457,6 +452,10 @@ msgstr "バイナリ"
 #. Resource IDs: (118)
 msgid "click to edit the text as a multiline text"
 msgstr "クリックでテキストをマルチテキストとして編集"
+
+#. Resource IDs: (159)
+msgid "dark mode requires at least Win10 1803, and it must be enabled in the Windows system settings."
+msgstr ""
 
 #. Resource IDs: (121)
 msgid "equal to"
