@@ -8,7 +8,7 @@
 "Content-Transfer-Encoding: 8bit\n"
 #
 # encoding: UTF-8
-# Language: Portuguese (Brazil) resources
+# Language: Portuguese Brazilian (Brazil) resources
 # Last-Translator: (pt-BR) Tradução em português brasileiro por fcgouveia
 #
 
@@ -270,6 +270,10 @@ msgstr "OK"
 #. Resource IDs: (1080)
 msgid "Older than"
 msgstr "Mais velho que"
+
+#. Resource IDs: (1090)
+msgid "Don't warn when replacing without creating backups"
+msgstr ""
 
 #. Resource IDs: (1062)
 msgid "Only one instance"

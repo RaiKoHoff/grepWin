@@ -9,7 +9,7 @@
 #
 # encoding: UTF-8
 # Language: Turkish (Turkey) resources
-# Last-Translator: (tr-TR) ghost tarafından Türkçe çeviri
+# Last-Translator: (tr-TR) MertcanGokgoz tarafından Türkçe çeviri
 #
 
 #, fuzzy
@@ -270,6 +270,10 @@ msgstr "TAMAM"
 #. Resource IDs: (1080)
 msgid "Older than"
 msgstr "Daha Eski"
+
+#. Resource IDs: (1090)
+msgid "Don't warn when replacing without creating backups"
+msgstr ""
 
 #. Resource IDs: (1063)
 msgid "Only one instance"

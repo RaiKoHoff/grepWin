@@ -8,7 +8,7 @@
 "Content-Transfer-Encoding: 8bit\n"
 #
 # encoding: UTF-8
-# Language: Simplified Chinese (China) resources
+# Language: Chinese Simplified (China) resources
 # Last-Translator: (zh-CN) 简体中文翻译 by lhmouse
 #
 
@@ -270,6 +270,10 @@ msgstr "确定"
 #. Resource IDs: (1080)
 msgid "Older than"
 msgstr "早于"
+
+#. Resource IDs: (1090)
+msgid "Don't warn when replacing without creating backups"
+msgstr ""
 
 #. Resource IDs: (1063)
 msgid "Only one instance"
