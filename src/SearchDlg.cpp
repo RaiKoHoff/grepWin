@@ -159,7 +159,6 @@ CSearchDlg::~CSearchDlg(void)
 
 LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(lParam);
     if (uMsg == GREPWIN_STARTUPMSG)
     {
         if ((GetTickCount64() - 4000) < g_startTime)
@@ -565,6 +564,13 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             mmi->ptMinTrackSize.x = m_resizer.GetDlgRect()->right;
             mmi->ptMinTrackSize.y = m_resizer.GetDlgRect()->bottom;
             return 0;
+        }
+        break;
+        case WM_DPICHANGED:
+        {
+            const RECT* rect = reinterpret_cast<RECT*>(lParam);
+            SetWindowPos(*this, NULL, rect->left, rect->top, rect->right - rect->left, rect->bottom - rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
+            ::RedrawWindow(*this, nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE | RDW_ERASE | RDW_INTERNALPAINT | RDW_ALLCHILDREN | RDW_UPDATENOW);
         }
         break;
         case WM_SETCURSOR:
@@ -2866,7 +2872,10 @@ void CSearchDlg::SearchFile(CSearchInfo sinfo, const std::wstring& searchRoot, b
                     if (m_bCreateBackup)
                     {
                         std::wstring backupfile = sinfo.filepath + _T(".bak");
-                        if (DWORD(m_regBackupInFolder))
+                        auto backupInFolder = bPortable 
+                            ? (_wtoi(g_iniFile.GetValue(L"settings", L"backupinfolder", L"0")) != 0)
+                            : (DWORD(m_regBackupInFolder) != 0);
+                        if (backupInFolder)
                         {
                             std::wstring backupFolder = searchRoot + L"\\grepWin_backup\\";
                             backupFolder += sinfo.filepath.substr(searchRoot.size() + 1);
