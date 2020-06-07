@@ -303,7 +303,10 @@ public:
      *
      * \return The WIN32_FIND_DATA structure of the file or directory
      */
-    const WIN32_FIND_DATA * GetFileInfo() {return m_seStack->GetFileFindData();}
+    const WIN32_FIND_DATA* GetFileInfo()
+    {
+        return (m_seStack && m_seStack->IsValid()) ? m_seStack->GetFileFindData() : nullptr;
+    }
 
     /**
      * Set a mask of file attributes to ignore. Files or directories that
