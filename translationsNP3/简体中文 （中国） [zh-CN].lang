@@ -39,7 +39,7 @@ msgstr "还有 %ld 个匹配"
 
 #. Resource IDs: (160)
 msgid "Path does not exist or is not accessible!"
-msgstr ""
+msgstr "路径不存在或无法访问！"
 
 #. Resource IDs: (1069)
 msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %pattern% with the search string."
@@ -64,6 +64,10 @@ msgstr "..."
 #. Resource IDs: (1061, 1063, 1064, 1066, 1067)
 msgid "/"
 msgstr "/"
+
+#. Resource IDs: (1093)
+msgid ">>>"
+msgstr ">>>"
 
 #. Resource IDs: (1052, 135)
 msgid "About grepWinNP3"
@@ -190,6 +194,14 @@ msgstr "排除目录（正则）："
 msgid "Ext"
 msgstr "扩展名"
 
+#. Resource IDs: (164)
+msgid "Export resultlist"
+msgstr "导出结果列表"
+
+#. Resource IDs: (163)
+msgid "Export results..."
+msgstr "导出结果..."
+
 #. Resource IDs: (1039)
 msgid "File Names match:\nuse '|' to separate multiple text match patterns, prepen&d '-' to exclude"
 msgstr "文件名称匹配：\n使用 | 来分隔多个文本匹配规则, 前置 - 用于排除(&D)"
@@ -225,6 +237,10 @@ msgstr "包含系统项目"
 #. Resource IDs: (153)
 msgid "Invalid path!"
 msgstr "无效路径！"
+
+#. Resource IDs: (161)
+msgid "Inverse search (NOT searchstring)"
+msgstr "否定搜索（选定不符合条件的行）"
 
 #. Resource IDs: (1019)
 msgid "KB"
@@ -273,7 +289,7 @@ msgstr "早于"
 
 #. Resource IDs: (1090)
 msgid "Don't warn when replacing without creating backups"
-msgstr ""
+msgstr "当替换时若不创建备份不要显示警告"
 
 #. Resource IDs: (1063)
 msgid "Only one instance"
@@ -370,6 +386,10 @@ msgstr "大小写敏感查找"
 #. Resource IDs: (1015)
 msgid "Search in"
 msgstr "查找于"
+
+#. Resource IDs: (162)
+msgid "Search in found files"
+msgstr "在找到的文件中查找"
 
 #. Resource IDs: (1018)
 msgid "Search results"
@@ -475,6 +495,18 @@ msgstr "grepWinNP3 设置"
 #. Resource IDs: (157)
 msgid "hold down the shift key to find files that DO NOT contain the search string"
 msgstr "按住 Shift 键来查找不包含查找字符串的文件"
+
+#. Resource IDs: (165)
+msgid "include file paths"
+msgstr "包含文件路径"
+
+#. Resource IDs: (166)
+msgid "include match line numbers"
+msgstr "包含匹配行号"
+
+#. Resource IDs: (167)
+msgid "include match line text"
+msgstr "包含匹配行文本"
 
 #. Resource IDs: (132)
 msgid "invalid regex!"
