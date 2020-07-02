@@ -49,6 +49,8 @@
 #include "OnOutOfScope.h"
 #include "COMPtrs.h"
 #include "PreserveChdir.h"
+#include "TempFile.h"
+#include "version.h"
 
 #include <string>
 #include <map>
@@ -278,6 +280,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_pDropTarget->AddSuportedFormat(ftetc);
             ftetc.cfFormat = CF_HDROP;
             m_pDropTarget->AddSuportedFormat(ftetc);
+            m_pDropTarget->SetMultipathConcatenate('|');
 
             m_editFilePatterns.Subclass(hwndDlg, IDC_PATTERN);
             m_editExcludeDirsPatterns.Subclass(hwndDlg, IDC_EXCLUDEDIRSPATTERN);
@@ -428,6 +431,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_resizer.AddControl(hwndDlg, IDC_TESTREGEX, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_ADDTOBOOKMARKS, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_BOOKMARKS, RESIZER_TOPLEFT);
+            m_resizer.AddControl(hwndDlg, IDC_UPDATELINK, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_GROUPLIMITSEARCH, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_ALLSIZERADIO, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_SIZERADIO, RESIZER_TOPLEFT);
@@ -501,6 +505,17 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             }
             InitResultList();
 
+            bool doCheck = true;
+            if (bPortable)
+                doCheck = !!_wtoi(g_iniFile.GetValue(L"global", L"CheckForUpdates", L"1"));
+            else
+                doCheck = !!DWORD(CRegStdDWORD(L"Software\\grepWin\\CheckForUpdates", 1));
+            if (doCheck)
+            {
+                m_updateCheckThread = std::move(std::thread([&]() { CheckForUpdates(); }));
+                ShowUpdateAvailable();
+            }
+
             if (hInitProtection)
                 CloseHandle(hInitProtection);
             hInitProtection = nullptr;
@@ -521,6 +536,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             return FALSE;
         case WM_CLOSE:
         {
+            if (m_updateCheckThread.joinable())
+                m_updateCheckThread.join();
             if (!DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)))
             {
                 if (m_dwThreadRunning)
@@ -586,6 +603,22 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                             return TRUE;
                         }
                         break;
+                    }
+                    break;
+                case IDC_UPDATELINK:
+                    switch (((LPNMHDR)lParam)->code)
+                    {
+                        case NM_CLICK:
+                        case NM_RETURN:
+                        {
+                            PNMLINK pNMLink = (PNMLINK)lParam;
+                            LITEM   item    = pNMLink->item;
+                            if (item.iLink == 0)
+                            {
+                                ShellExecute(*this, L"open", item.szUrl, nullptr, nullptr, SW_SHOW);
+                            }
+                            break;
+                        }
                     }
                     break;
             }
@@ -927,6 +960,8 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         break;
         case IDCANCEL:
         {
+            if (m_updateCheckThread.joinable())
+                m_updateCheckThread.join();
             if (DWORD(CRegStdDWORD(L"Software\\grepWin\\escclose", FALSE)))
             {
                 if (m_dwThreadRunning)
@@ -1395,6 +1430,12 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                         exportlinenumbers = includeMatchLineNumbers ? 1 : 0;
                         exportlinecontent = includeMatchLineTexts ? 1 : 0;
                     }
+                    SHELLEXECUTEINFO sei = { 0 };
+                    sei.cbSize = sizeof(SHELLEXECUTEINFO);
+                    sei.lpVerb = TEXT("open");
+                    sei.lpFile = path.c_str();
+                    sei.nShow = SW_SHOWNORMAL;
+                    ShellExecuteEx(&sei);
                 }
             }
         }
@@ -1890,7 +1931,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                 CStringUtils::trim(matchtext);
                 matchString += CStringUtils::Format(sFormat.c_str(), inf.matchlinesnumbers[i], matchtext.c_str());
             }
-            if (inf.matchlines.size() >= 5)
+            if (inf.matchlines.size() > 5)
             {
                 std::wstring sx  = TranslatedString(hResource, IDS_XMOREMATCHES);
                 std::wstring ssx = CStringUtils::Format(sx.c_str(), int(inf.matchlines.size() - 5));
@@ -3504,8 +3545,146 @@ bool CSearchDlg::FailedShowMessage(HRESULT hr)
     if (FAILED(hr))
     {
         _com_error err(hr);
-        MessageBox(nullptr, L"BowPad", err.ErrorMessage(), MB_ICONERROR);
+        MessageBox(nullptr, L"grepWin", err.ErrorMessage(), MB_ICONERROR);
         return true;
     }
     return false;
+}
+
+void CSearchDlg::CheckForUpdates(bool force)
+{
+    bool bNewerAvailable = false;
+    // check for newer versions
+    bool doCheck = true;
+    if (bPortable)
+        doCheck = !!_wtoi(g_iniFile.GetValue(L"global", L"CheckForUpdates", L"1"));
+    else
+        doCheck = !!DWORD(CRegStdDWORD(L"Software\\grepWin\\CheckForUpdates", 1));
+    if (doCheck)
+    {
+        time_t now;
+        time(&now);
+        time_t last = 0;
+        if (bPortable)
+        {
+            last = _wtoll(g_iniFile.GetValue(L"global", L"CheckForUpdatesLast", L"0"));
+        }
+        else
+        {
+            last = _wtoll(((std::wstring)CRegStdString(L"Software\\grepWin\\CheckForUpdatesLast", L"0")).c_str());
+        }
+        double days = std::difftime(now, last) / (60LL * 60LL * 24LL);
+        if ((days >= 7.0) || force)
+        {
+            std::wstring tempfile = CTempFiles::Instance().GetTempFilePath(true);
+
+            std::wstring sCheckURL = L"https://raw.githubusercontent.com/stefankueng/grepWin/main/version.txt";
+            HRESULT      res       = URLDownloadToFile(nullptr, sCheckURL.c_str(), tempfile.c_str(), 0, nullptr);
+            if (res == S_OK)
+            {
+                if (bPortable)
+                {
+                    g_iniFile.SetValue(L"global", L"CheckForUpdatesLast", std::to_wstring(now).c_str());
+                }
+                else
+                {
+                    auto regLast = CRegStdString(L"Software\\grepWin\\CheckForUpdatesLast", L"0");
+                    regLast      = std::to_wstring(now);
+                }
+                std::ifstream File;
+                File.open(tempfile.c_str());
+                if (File.good())
+                {
+                    char line[1024];
+                    File.getline(line, sizeof(line));
+                    auto verLine    = CUnicodeUtils::StdGetUnicode(line);
+                    bNewerAvailable = IsVersionNewer(verLine);
+                    File.getline(line, sizeof(line));
+                    auto updateurl = CUnicodeUtils::StdGetUnicode(line);
+                    if (bNewerAvailable)
+                    {
+                        if (bPortable)
+                        {
+                            g_iniFile.SetValue(L"global", L"CheckForUpdatesVersion", verLine.c_str());
+                            g_iniFile.SetValue(L"global", L"CheckForUpdatesUrl", updateurl.c_str());
+                        }
+                        else
+                        {
+                            auto regVersion   = CRegStdString(L"Software\\grepWin\\CheckForUpdatesVersion", L"");
+                            regVersion        = verLine;
+                            auto regUpdateUrl = CRegStdString(L"Software\\grepWin\\CheckForUpdatesUrl", L"");
+                            regUpdateUrl      = updateurl;
+                        }
+                        ShowUpdateAvailable();
+                    }
+                }
+                File.close();
+                DeleteFile(tempfile.c_str());
+            }
+        }
+    }
+}
+
+void CSearchDlg::ShowUpdateAvailable()
+{
+    std::wstring sVersion;
+    std::wstring updateUrl;
+    if (bPortable)
+    {
+        sVersion  = g_iniFile.GetValue(L"global", L"CheckForUpdatesVersion", L"");
+        updateUrl = g_iniFile.GetValue(L"global", L"CheckForUpdatesUrl", L"");
+    }
+    else
+    {
+        sVersion  = CRegStdString(L"Software\\grepWin\\CheckForUpdatesVersion", L"");
+        updateUrl = CRegStdString(L"Software\\grepWin\\CheckForUpdatesUrl", L"");
+    }
+    if (IsVersionNewer(sVersion))
+    {
+        auto sUpdateAvailable = TranslatedString(hResource, IDS_UPDATEAVAILABLE);
+        sUpdateAvailable      = CStringUtils::Format(sUpdateAvailable.c_str(), sVersion.c_str());
+        auto sLinkText        = CStringUtils::Format(L"<a href=\"%s\">%s</a>", updateUrl.c_str(), sUpdateAvailable.c_str());
+        SetDlgItemText(*this, IDC_UPDATELINK, sLinkText.c_str());
+        ShowWindow(GetDlgItem(*this, IDC_UPDATELINK), SW_SHOW);
+    }
+}
+
+bool CSearchDlg::IsVersionNewer(const std::wstring& sVer)
+{
+    int major = 0;
+    int minor = 0;
+    int micro = 0;
+    int build = 0;
+
+    const wchar_t* pLine = sVer.c_str();
+
+    major = _wtoi(pLine);
+    pLine = wcschr(pLine, '.');
+    if (pLine)
+    {
+        pLine++;
+        minor = _wtoi(pLine);
+        pLine = wcschr(pLine, '.');
+        if (pLine)
+        {
+            pLine++;
+            micro = _wtoi(pLine);
+            pLine = wcschr(pLine, '.');
+            if (pLine)
+            {
+                pLine++;
+                build = _wtoi(pLine);
+            }
+        }
+    }
+    bool isNewer = false;
+    if (major > GREPWIN_VERMAJOR)
+        isNewer = true;
+    else if ((minor > GREPWIN_VERMINOR) && (major == GREPWIN_VERMAJOR))
+        isNewer = true;
+    else if ((micro > GREPWIN_VERMICRO) && (minor == GREPWIN_VERMINOR) && (major == GREPWIN_VERMAJOR))
+        isNewer = true;
+    else if ((build > GREPWIN_VERBUILD) && (micro == GREPWIN_VERMICRO) && (minor == GREPWIN_VERMINOR) && (major == GREPWIN_VERMAJOR))
+        isNewer = true;
+    return isNewer;
 }
