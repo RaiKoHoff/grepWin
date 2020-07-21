@@ -32,6 +32,16 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 // remains consistent on all systems.
 IDI_GREPWIN             ICON                    "grepWinNP3.ico"
 
+#endif    // Neutral resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -317,36 +327,6 @@ END
 IDR_INFODLG             HTML                    "infodlg.htm"
 
 
-#ifdef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// TEXTINCLUDE
-//
-
-1 TEXTINCLUDE
-BEGIN
-    "..\\resource.h\0"
-END
-
-2 TEXTINCLUDE
-BEGIN
-    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "#include ""windows.h""\r\n"
-    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "#ifndef APSTUDIO_INVOKED\r\n"
-    "#include ""grepWin.rc2""\r\n"
-    "#endif\0"
-END
-
-3 TEXTINCLUDE
-BEGIN
-    "\r\n"
-    "\0"
-END
-
-#endif    // APSTUDIO_INVOKED
-
-
 /////////////////////////////////////////////////////////////////////////////
 //
 // String Table
@@ -438,6 +418,45 @@ BEGIN
     IDS_UPDATEAVAILABLE     "grepWinNP3 %s is available"
     IDS_CAPTURESEARCH       "Capture search"
 END
+
+#endif    // Neutral resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE
+BEGIN
+    "..\\resource.h\0"
+END
+
+2 TEXTINCLUDE
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#ifndef APSTUDIO_INVOKED\r\n"
+    "#include ""grepWin.rc2""\r\n"
+    "#endif\0"
+END
+
+3 TEXTINCLUDE
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
 
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////
