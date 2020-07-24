@@ -220,7 +220,7 @@ msgstr "GREPWINNP3"
 
 #. Resource IDs: (156)
 msgid "If enabled, a backup folder is created inside the folder that's searched/replaced in, and the files are backed up into that folder"
-msgstr "si está activado, una carpeta de respaldo se crea dentro de la cual se busca/reemplaza, y los archivos son colocados en esta"
+msgstr "Si está activado, una carpeta de respaldo se crea dentro de la cual se busca/reemplaza, y los archivos son colocados en esta"
 
 #. Resource IDs: (1050)
 msgid "Include binary files"
@@ -345,7 +345,7 @@ msgstr "Prueba Regex"
 
 #. Resource IDs: (1046)
 msgid "Regex match"
-msgstr "Búsqueda Regex"
+msgstr "Modelo Regex"
 
 #. Resource IDs: (65535)
 msgid "Regex replace string:"
@@ -442,7 +442,7 @@ msgstr "Texto"
 
 #. Resource IDs: (1048)
 msgid "Text match"
-msgstr "Coincidencia de texto"
+msgstr "Modelo de texto"
 
 #. Resource IDs: (1002)
 msgid "Text search"
@@ -562,7 +562,7 @@ msgid "regex ok"
 msgstr "regex ok"
 
 #. Resource IDs: (117)
-msgid "reuse grepWinNP3 instances"
+msgid "reuse grepWinNP3 instances."
 msgstr "reutilizar instancias de grepWinNP3."
 
 #. Resource IDs: (151)

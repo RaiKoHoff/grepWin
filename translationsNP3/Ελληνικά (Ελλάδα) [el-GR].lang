@@ -164,7 +164,7 @@ msgstr ""
 
 #. Resource IDs: (1051)
 msgid "Dot matches newline"
-msgstr "Η τελεία αντιστοιχεί σε νέα γραμμή"
+msgstr "Σημείο αντιστοιχεί σε νέα γραμμή"
 
 #. Resource IDs: (1056)
 msgid "Double-Click to select a preset"
@@ -562,7 +562,7 @@ msgid "regex ok"
 msgstr "regex εντάξει"
 
 #. Resource IDs: (117)
-msgid "reuse grepWinNP3 instances"
+msgid "reuse grepWinNP3 instances."
 msgstr "επαναχρησιμοποίηση παρουσιών grepWinNP3."
 
 #. Resource IDs: (151)

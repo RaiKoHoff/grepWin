@@ -220,7 +220,7 @@ msgstr "GREPWINNP3"
 
 #. Resource IDs: (156)
 msgid "If enabled, a backup folder is created inside the folder that's searched/replaced in, and the files are backed up into that folder"
-msgstr "indien ingeschakeld, wordt er een backup map gemaakt in de map die wordt doorzocht/vervangen en van de bestanden wordt een backup gemaakt in die map"
+msgstr "Indien ingeschakeld, wordt er een backup map gemaakt in de map die wordt doorzocht/vervangen en van de bestanden wordt een backup gemaakt in die map"
 
 #. Resource IDs: (1050)
 msgid "Include binary files"
@@ -345,7 +345,7 @@ msgstr "Regex Test"
 
 #. Resource IDs: (1046)
 msgid "Regex match"
-msgstr "Regex gevonden"
+msgstr "Regex-jabloon"
 
 #. Resource IDs: (65535)
 msgid "Regex replace string:"
@@ -442,7 +442,7 @@ msgstr "Tekst"
 
 #. Resource IDs: (1048)
 msgid "Text match"
-msgstr "Tekst gevonden"
+msgstr "Tekstsjabloon"
 
 #. Resource IDs: (1002)
 msgid "Text search"
@@ -562,8 +562,8 @@ msgid "regex ok"
 msgstr "Regex ok"
 
 #. Resource IDs: (117)
-msgid "reuse grepWinNP3 instances"
-msgstr "gebruik grepWinNP3 instanties"
+msgid "reuse grepWinNP3 instances."
+msgstr "gebruik grepWinNP3 instanties."
 
 #. Resource IDs: (151)
 #, c-format

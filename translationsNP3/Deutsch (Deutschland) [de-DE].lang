@@ -164,7 +164,7 @@ msgstr "Keine Warnung bei Textersetzung ohne Backup"
 
 #. Resource IDs: (1051)
 msgid "Dot matches newline"
-msgstr "Punkt entspricht Zeilenvorschub"
+msgstr "Punkt entspricht Zeilenumbruch"
 
 #. Resource IDs: (1056)
 msgid "Double-Click to select a preset"
@@ -562,7 +562,7 @@ msgid "regex ok"
 msgstr "Regex OK"
 
 #. Resource IDs: (117)
-msgid "reuse grepWinNP3 instances"
+msgid "reuse grepWinNP3 instances."
 msgstr "grepWinNP3-Instanzen wiederverwenden."
 
 #. Resource IDs: (151)
@@ -596,5 +596,5 @@ msgstr "Max # an gleichz. Worker"
 
 #. Resource IDs: (3005)
 msgid "This adds a new entry to the context menu named 'Open with Editor'"
-msgstr "Dies fügt dem Kontetxmenü einen neuen Eintrag hinzu, benannt 'Mit Editor öffnen'."
+msgstr "Dies fügt dem Kontextmenü einen neuen Eintrag hinzu, benannt 'Mit Editor öffnen'."
 
