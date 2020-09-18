@@ -196,8 +196,6 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_AutoCompleteSearchPaths.Load(L"Software\\grepWin\\History", L"SearchPaths");
             m_AutoCompleteSearchPaths.Init(GetDlgItem(hwndDlg, IDC_SEARCHPATH));
 
-            m_link.ConvertStaticToHyperlink(hwndDlg, IDC_ABOUTLINK, L"");
-
             m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback(
                 [this]() {
                     auto bDark = CTheme::Instance().IsDarkTheme();
@@ -218,6 +216,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             SetWindowTheme(GetToolTipHWND(), L"Explorer", nullptr);
 
             CLanguage::Instance().TranslateWindow(*this);
+            AddToolTip(IDC_NEWINSTANCE, TranslatedString(hResource, IDS_NEWINSTANCE_TT).c_str());
             AddToolTip(IDC_PATTERN, TranslatedString(hResource, IDS_PATTERN_TT).c_str());
             AddToolTip(IDC_EXCLUDEDIRSPATTERN, TranslatedString(hResource, IDS_EXCLUDEDIR_TT).c_str());
             AddToolTip(IDC_SEARCHPATH, TranslatedString(hResource, IDS_SEARCHPATH_TT).c_str());
@@ -304,11 +303,13 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 if (menuItemsCount > 2)
                 {
                     InsertMenu(hSysMenu, menuItemsCount - 2, MF_STRING | MF_BYPOSITION, ID_ABOUTBOX, TranslatedString(hResource, IDS_ABOUT).c_str());
+                    InsertMenu(hSysMenu, menuItemsCount - 2, MF_STRING | MF_BYPOSITION, ID_CLONE, TranslatedString(hResource, IDS_CLONE).c_str());
                     InsertMenu(hSysMenu, menuItemsCount - 2, MF_SEPARATOR | MF_BYPOSITION, NULL, NULL);
                 }
                 else
                 {
                     AppendMenu(hSysMenu, MF_SEPARATOR, NULL, NULL);
+                    AppendMenu(hSysMenu, MF_STRING, ID_CLONE, TranslatedString(hResource, IDS_CLONE).c_str());
                     AppendMenu(hSysMenu, MF_STRING, ID_ABOUTBOX, TranslatedString(hResource, IDS_ABOUT).c_str());
                 }
             }
@@ -316,7 +317,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             wchar_t buf[MAX_PATH] = {0};
             if (m_bSizeC && (m_lSize != (uint64_t)-1))
             {
-                _stprintf_s(buf, _countof(buf), L"%I64u", m_lSize);
+                swprintf_s(buf, _countof(buf), L"%I64u", m_lSize);
                 SetDlgItemText(hwndDlg, IDC_SIZEEDIT, buf);
             }
             else
@@ -324,7 +325,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 uint64_t s = _wtoll(std::wstring(m_regSize).c_str());
                 if (bPortable)
                     s = _wtoi(g_iniFile.GetValue(L"global", L"size", L"2000"));
-                _stprintf_s(buf, _countof(buf), L"%I64u", s);
+                swprintf_s(buf, _countof(buf), L"%I64u", s);
                 SetDlgItemText(hwndDlg, IDC_SIZEEDIT, buf);
             }
 
@@ -423,6 +424,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_resizer.AddControl(hwndDlg, IDC_GROUPSEARCHIN, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_PATHMRU, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_SEARCHPATH, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_NEWINSTANCE, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_SEARCHPATHBROWSE, RESIZER_TOPRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_GROUPSEARCHFOR, RESIZER_TOPLEFTRIGHT);
             m_resizer.AddControl(hwndDlg, IDC_REGEXRADIO, RESIZER_TOPLEFT);
@@ -636,6 +638,23 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                         }
                     }
                     break;
+                case IDC_ABOUTLINK:
+                    switch (((LPNMHDR)lParam)->code)
+                    {
+                        case NM_CLICK:
+                        case NM_RETURN:
+                        {
+                            PNMLINK pNMLink = (PNMLINK)lParam;
+                            LITEM   item    = pNMLink->item;
+                            if (item.iLink == 0)
+                            {
+                                CAboutDlg dlgAbout(*this);
+                                dlgAbout.DoModal(hResource, IDD_ABOUT, *this);
+                            }
+                            break;
+                        }
+                    }
+                    break;
             }
         }
         break;
@@ -722,10 +741,19 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         break;
         case WM_SYSCOMMAND:
         {
-            if ((wParam & 0xFFF0) == ID_ABOUTBOX)
+            switch (wParam & 0xFFFF)
             {
-                CAboutDlg dlgAbout(*this);
-                dlgAbout.DoModal(hResource, IDD_ABOUT, *this);
+                case ID_ABOUTBOX:
+                {
+                    CAboutDlg dlgAbout(*this);
+                    dlgAbout.DoModal(hResource, IDD_ABOUT, *this);
+                }
+                break;
+                case ID_CLONE:
+                {
+                    CloneWindow();
+                }
+                break;
             }
         }
         break;
@@ -1042,6 +1070,9 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
             }
         }
         break;
+        case IDC_NEWINSTANCE:
+            CloneWindow();
+            break;
         case IDC_SEARCHPATHBROWSE:
         {
             CBrowseFolder browse;
@@ -1100,7 +1131,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 wchar_t compactPath[100] = {0};
                 PathCompactPathEx(compactPath, buf.get(), 40, 0);
                 wchar_t titleBuf[MAX_PATH] = {0};
-                _stprintf_s(titleBuf, _countof(titleBuf), L"grepWin : %s", compactPath);
+                swprintf_s(titleBuf, _countof(titleBuf), L"grepWin : %s", compactPath);
                 SetWindowText(*this, titleBuf);
             }
         }
@@ -1214,12 +1245,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         {
             InitResultList();
             FillResultList();
-        }
-        break;
-        case IDC_ABOUTLINK:
-        {
-            CAboutDlg dlgAbout(*this);
-            dlgAbout.DoModal(hResource, IDD_ABOUT, *this);
         }
         break;
         case IDC_SETTINGSBUTTON:
@@ -1515,8 +1540,8 @@ void CSearchDlg::UpdateInfoLabel()
 {
     std::wstring sText;
     wchar_t      buf[1024] = {0};
-    _stprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABEL).c_str(),
-                m_searchedItems, m_totalitems - m_searchedItems, m_totalmatches, m_items.size());
+    swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABEL).c_str(),
+               m_searchedItems, m_totalitems - m_searchedItems, m_totalmatches, m_items.size());
     sText = buf;
 
     SetDlgItemText(*this, IDC_SEARCHINFOLABEL, sText.c_str());
@@ -2461,7 +2486,7 @@ bool CSearchDlg::SaveSettings()
     if (!m_bAllSize)
     {
         buf     = GetDlgItemText(IDC_SIZEEDIT);
-        m_lSize = _tstol(buf.get());
+        m_lSize = _wtol(buf.get());
         if (bPortable)
             g_iniFile.SetValue(L"global", L"Size", CStringUtils::Format(L"%I64u", m_lSize).c_str());
         else
@@ -3776,4 +3801,33 @@ bool CSearchDlg::IsVersionNewer(const std::wstring& sVer)
     else if ((build > GREPWIN_VERBUILD) && (micro == GREPWIN_VERMICRO) && (minor == GREPWIN_VERMINOR) && (major == GREPWIN_VERMAJOR))
         isNewer = true;
     return isNewer;
+}
+
+bool CSearchDlg::CloneWindow()
+{
+    if (!SaveSettings())
+        return false;
+    if (bPortable)
+    {
+        FILE* pFile = NULL;
+        _wfopen_s(&pFile, g_iniPath.c_str(), L"wb");
+        g_iniFile.SaveFile(pFile);
+        fclose(pFile);
+    }
+
+    std::wstring arguments;
+    arguments += CStringUtils::Format(L" /searchpath:\"%s\"", m_searchpath.c_str());
+    arguments += CStringUtils::Format(L" /searchfor:\"%s\"", m_searchString.c_str());
+    arguments += CStringUtils::Format(L" /replacewith:\"%s\"", m_replaceString.c_str());
+    arguments += L" /new";
+    auto file = CPathUtils::GetModulePath();
+
+    SHELLEXECUTEINFO sei = {0};
+    sei.cbSize           = sizeof(SHELLEXECUTEINFO);
+    sei.lpVerb           = TEXT("open");
+    sei.lpFile           = file.c_str();
+    sei.lpParameters     = arguments.c_str();
+    sei.nShow            = SW_SHOWNORMAL;
+    ShellExecuteEx(&sei);
+    return true;
 }

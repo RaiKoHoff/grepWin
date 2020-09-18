@@ -62,11 +62,19 @@ msgstr " ... "
 msgid "/"
 msgstr "/"
 
+#. Resource IDs: (1045)
+msgid "<a href=\"https://tools.stefankueng.com\">Visit our website</a>"
+msgstr "<a href=\"https://tools.stefankueng.com\">Besuchen Sie unsere website</a>"
+
+#. Resource IDs: (1052)
+msgid "<a>about grepWin</a>"
+msgstr "<a>über grepWin</a>"
+
 #. Resource IDs: (1086)
 msgid ">"
 msgstr ">"
 
-#. Resource IDs: (1052, 135)
+#. Resource IDs: (135)
 msgid "About grepWin"
 msgstr "Über grepWin"
 
@@ -465,10 +473,6 @@ msgstr "Dateien als UTF8 behandeln"
 msgid "Treat files as binary"
 msgstr "Dateien als Binär behandeln"
 
-#. Resource IDs: (1045)
-msgid "Visit our website"
-msgstr "Unsere Website besuchen"
-
 #. Resource IDs: (116)
 msgid "a regular expression used for searching. Press F1 for more info."
 msgstr "Ein regulärer zur Suche verwendeter Ausdruck. Für mehr Informationen drücken Sie F1."
@@ -575,6 +579,10 @@ msgstr "Scanning der Datei '%s'"
 msgid "search string is empty"
 msgstr "Suchstring ist leer"
 
+#. Resource IDs: (170, 171)
+msgid "start new grepWin window"
+msgstr "neues grepWin-Fenster starten"
+
 #. Resource IDs: (114)
 msgid "the path(s) which is searched recursively.\r\nSeparate paths with the | symbol.\r\nExample: c:\\temp|d:\\logs"
 msgstr "Der Pfad bzw. die Pfade, der bzw. die rekursiv gesucht wird bzw. werden.\r\nSeparieren Sie Pfade mit dem | Symbol.\r\nBeispiel: c:\\temp|d:\\logs"
@@ -582,4 +590,8 @@ msgstr "Der Pfad bzw. die Pfade, der bzw. die rekursiv gesucht wird bzw. werden.
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "Sie können Verzeichnisse ausschließen, z.B. CVS und Images.\r\nBeispiel: ^(CVS|images)$\r\nHinweis´, '.svn'-Ordner sind in Windows 'versteckt', so werden diese üblicherweise nicht gescannt."
+
+#. Resource IDs: (1024)
+msgid "⑂"
+msgstr "⑂"
 

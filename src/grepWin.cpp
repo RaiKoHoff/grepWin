@@ -31,10 +31,11 @@
 #pragma warning(pop)
 
 // Global Variables:
-HINSTANCE  g_hInst; // current instance
-bool       bPortable = false;
-CSimpleIni g_iniFile;
-HANDLE     hInitProtection = nullptr;
+HINSTANCE    g_hInst; // current instance
+bool         bPortable = false;
+CSimpleIni   g_iniFile;
+std::wstring g_iniPath;
+HANDLE       hInitProtection = nullptr;
 
 ULONGLONG g_startTime        = GetTickCount64();
 UINT      GREPWIN_STARTUPMSG = RegisterWindowMessage(L"grepWin_StartupMessage");
@@ -116,10 +117,10 @@ BOOL CALLBACK windowenumerator(__in HWND hwnd, __in LPARAM lParam)
     return TRUE;
 }
 
-int APIENTRY _tWinMain(HINSTANCE hInstance,
-                       HINSTANCE hPrevInstance,
-                       LPTSTR    lpCmdLine,
-                       int       nCmdShow)
+int APIENTRY wWinMain(HINSTANCE hInstance,
+                      HINSTANCE hPrevInstance,
+                      LPTSTR    lpCmdLine,
+                      int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -188,7 +189,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     HWND hWnd    = NULL;
     int  timeout = 20;
     // find already running grepWin windows
-    if (alreadyRunning)
+    if (alreadyRunning && !parser.HasKey(L"new"))
     {
         do
         {
@@ -201,7 +202,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 {
                     CloseHandle(hInitProtection);
                     Sleep(100);
-                    initInProgress = false;
+                    initInProgress  = false;
                     hInitProtection = ::CreateMutex(NULL, FALSE, L"{6473AA76-0EAE-4C96-8C99-AFDFEFFE42B6}");
                     if ((!hInitProtection) || (GetLastError() == ERROR_ALREADY_EXISTS))
                     {
@@ -219,17 +220,17 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
     }
 
     auto modulename = CPathUtils::GetFileName(CPathUtils::GetModulePath(0));
-    bPortable       = ((_tcsstr(modulename.c_str(), L"portable")) || (parser.HasKey(L"portable")));
+    bPortable       = ((wcsstr(modulename.c_str(), L"portable")) || (parser.HasKey(L"portable")));
 
-    std::wstring iniPath = CPathUtils::GetModuleDir(0);
-    iniPath += L"\\grepwin.ini";
+    g_iniPath = CPathUtils::GetModuleDir(0);
+    g_iniPath += L"\\grepwin.ini";
     if (parser.HasVal(L"inipath"))
-        iniPath = parser.GetVal(L"inipath");
+        g_iniPath = parser.GetVal(L"inipath");
 
     if (bPortable)
     {
         g_iniFile.SetUnicode();
-        g_iniFile.LoadFile(iniPath.c_str());
+        g_iniFile.LoadFile(g_iniPath.c_str());
     }
 
     if (hWnd)
@@ -308,15 +309,15 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 searchDlg.SetPreset(parser.GetVal(L"preset"));
 
             if (parser.HasVal(L"i"))
-                searchDlg.SetCaseSensitive(_tcsicmp(parser.GetVal(L"i"), L"yes") != 0);
+                searchDlg.SetCaseSensitive(_wcsicmp(parser.GetVal(L"i"), L"yes") != 0);
             if (parser.HasVal(L"n"))
-                searchDlg.SetMatchesNewline(_tcsicmp(parser.GetVal(L"n"), L"yes") == 0);
+                searchDlg.SetMatchesNewline(_wcsicmp(parser.GetVal(L"n"), L"yes") == 0);
             if (parser.HasVal(L"k"))
-                searchDlg.SetCreateBackups(_tcsicmp(parser.GetVal(L"k"), L"yes") == 0);
+                searchDlg.SetCreateBackups(_wcsicmp(parser.GetVal(L"k"), L"yes") == 0);
             if (parser.HasVal(L"utf8"))
-                searchDlg.SetUTF8(_tcsicmp(parser.GetVal(L"utf8"), L"yes") == 0);
+                searchDlg.SetUTF8(_wcsicmp(parser.GetVal(L"utf8"), L"yes") == 0);
             if (parser.HasVal(L"binary"))
-                searchDlg.SetBinary(_tcsicmp(parser.GetVal(L"binary"), L"yes") == 0);
+                searchDlg.SetBinary(_wcsicmp(parser.GetVal(L"binary"), L"yes") == 0);
             if (parser.HasVal(L"size"))
             {
                 int cmp = 0;
@@ -325,15 +326,15 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                 searchDlg.SetSize(parser.GetLongVal(L"size"), cmp);
             }
             if (parser.HasVal(L"s"))
-                searchDlg.SetIncludeSystem(_tcsicmp(parser.GetVal(L"s"), L"yes") == 0);
+                searchDlg.SetIncludeSystem(_wcsicmp(parser.GetVal(L"s"), L"yes") == 0);
             if (parser.HasVal(L"h"))
-                searchDlg.SetIncludeHidden(_tcsicmp(parser.GetVal(L"h"), L"yes") == 0);
+                searchDlg.SetIncludeHidden(_wcsicmp(parser.GetVal(L"h"), L"yes") == 0);
             if (parser.HasVal(L"u"))
-                searchDlg.SetIncludeSubfolders(_tcsicmp(parser.GetVal(L"u"), L"yes") == 0);
+                searchDlg.SetIncludeSubfolders(_wcsicmp(parser.GetVal(L"u"), L"yes") == 0);
             if (parser.HasVal(L"b"))
-                searchDlg.SetIncludeBinary(_tcsicmp(parser.GetVal(L"b"), L"yes") == 0);
+                searchDlg.SetIncludeBinary(_wcsicmp(parser.GetVal(L"b"), L"yes") == 0);
             if (parser.HasVal(L"regex"))
-                searchDlg.SetUseRegex(_tcsicmp(parser.GetVal(L"regex"), L"yes") == 0);
+                searchDlg.SetUseRegex(_wcsicmp(parser.GetVal(L"regex"), L"yes") == 0);
             else if (parser.HasVal(L"searchfor"))
                 searchDlg.SetUseRegex(true);
 
@@ -390,7 +391,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
         if (bPortable)
         {
             FILE* pFile = NULL;
-            _tfopen_s(&pFile, iniPath.c_str(), L"wb");
+            _wfopen_s(&pFile, g_iniPath.c_str(), L"wb");
             g_iniFile.SaveFile(pFile);
             fclose(pFile);
         }
