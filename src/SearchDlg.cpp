@@ -168,6 +168,7 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_regDate2Low(L"Software\\grepWinNP3\\Date2Low", 0)
     , m_regDate2High(L"Software\\grepWinNP3\\Date2High", 0)
     , m_regShowContent(L"Software\\grepWinNP3\\ShowContent", 0)
+    , m_regOpacityNoFocus(L"Software\\grepWinNP3\\OpacityNoFocus", 100)
     , m_AutoCompleteFilePatterns(bPortable ? &g_iniFile : nullptr)
     , m_AutoCompleteExcludeDirsPatterns(bPortable ? &g_iniFile : nullptr)
     , m_AutoCompleteSearchPatterns(bPortable ? &g_iniFile : nullptr)
@@ -207,6 +208,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
     {
     case WM_INITDIALOG:
         {
+            SetTransparency(ALPHA_OPAQUE);
             SHAutoComplete(GetDlgItem(*this, IDC_SEARCHPATH), SHACF_FILESYSTEM|SHACF_AUTOSUGGEST_FORCE_ON);
 
             m_AutoCompleteFilePatterns.Load(L"Software\\grepWinNP3\\History", L"FilePattern");
@@ -279,7 +281,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 if (bPortable)
                 {
                     m_patternregex = g_iniFile.GetValue(L"global", L"pattern", L"");
-                    m_bUseRegexForPaths = !!_wtoi(g_iniFile.GetValue(L"global", L"UseFileMatchRegex", L""));
+                    m_bUseRegexForPaths = g_iniFile.GetBoolValue(L"global", L"UseFileMatchRegex", false);
                 }
                 else
                 {
@@ -382,18 +384,21 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             if (!m_bSizeC)
             {
                 m_bAllSize = bPortable ? g_iniFile.GetBoolValue(L"global", L"AllSize", false) : !!DWORD(m_regAllSize);
-                m_sizeCmp = bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"SizeCombo", L"0")) : (int)DWORD(m_regSizeCombo);
+                m_sizeCmp = bPortable ? g_iniFile.GetLongValue(L"global", L"SizeCombo", 0) : (int)DWORD(m_regSizeCombo);
             }
             if (!m_bDateLimitC)
             {
-                m_DateLimit = bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"DateLimit", L"0")) : (int)DWORD(m_regDateLimit);
-                m_Date1.dwLowDateTime = bPortable ? wcstoul(g_iniFile.GetValue(L"global", L"Date1Low", L"0"), nullptr, 10) : DWORD(m_regDate1Low);
-                m_Date1.dwHighDateTime = bPortable ? wcstoul(g_iniFile.GetValue(L"global", L"Date1High", L"0"), nullptr, 10) : DWORD(m_regDate1High);
-                m_Date2.dwLowDateTime = bPortable ? wcstoul(g_iniFile.GetValue(L"global", L"Date2Low", L"0"), nullptr, 10) : DWORD(m_regDate2Low);
-                m_Date2.dwHighDateTime = bPortable ? wcstoul(g_iniFile.GetValue(L"global", L"Date2High", L"0"), nullptr, 10) : DWORD(m_regDate2High);
+                m_DateLimit = bPortable ? g_iniFile.GetLongValue(L"global", L"DateLimit", 0) : (int)DWORD(m_regDateLimit);
+                m_Date1.dwLowDateTime = bPortable ? g_iniFile.GetLongValue(L"global", L"Date1Low", 0) : DWORD(m_regDate1Low);
+                m_Date1.dwHighDateTime = bPortable ? g_iniFile.GetLongValue(L"global", L"Date1High", 0) : DWORD(m_regDate1High);
+                m_Date2.dwLowDateTime = bPortable ? g_iniFile.GetLongValue(L"global", L"Date2Low", 0) : DWORD(m_regDate2Low);
+                m_Date2.dwHighDateTime = bPortable ? g_iniFile.GetLongValue(L"global", L"Date2High", 0) : DWORD(m_regDate2High);
             }
 
             m_bUseRegex = (bPortable ? g_iniFile.GetBoolValue(L"global", L"UseRegex", false) : DWORD(m_regUseRegex));
+
+            m_OpacityNoFocus = (BYTE)(bPortable ? g_iniFile.GetLongValue(L"global", L"OpacityNoFocus", 100) : DWORD(m_regOpacityNoFocus));
+            m_OpacityNoFocus = (m_OpacityNoFocus > 100) ? 100 : m_OpacityNoFocus;
 
             SendDlgItemMessage(hwndDlg, IDC_SIZECOMBO, CB_SETCURSEL, m_sizeCmp, 0);
 
@@ -550,7 +555,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 #ifdef NP3_ALLOW_UPDATE
             bool doCheck = true;
             if (bPortable)
-                doCheck = !!_wtoi(g_iniFile.GetValue(L"global", L"CheckForUpdates", L"1"));
+                doCheck = g_iniFile.GetBoolValue(L"global", L"CheckForUpdates", true));
             else
                 doCheck = !!DWORD(CRegStdDWORD(L"Software\\grepWin\\CheckForUpdates", 1));
             if (doCheck)
@@ -903,6 +908,20 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             }
         }
     break;
+    case WM_ACTIVATE:
+        switch (LOWORD(wParam))
+        {
+            case WA_INACTIVE:
+                SetTransparency((BYTE)MulDiv(m_OpacityNoFocus, 255, 100));
+                break;
+
+            case WA_CLICKACTIVE:
+                // mouse click activation
+            case WA_ACTIVE:
+                SetTransparency(ALPHA_OPAQUE);
+                break;
+        }
+        break;
     default:
         return FALSE;
     }
@@ -1461,6 +1480,10 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
 
             COMDLG_FILTERSPEC const aFileTypes[] = { {L"Text files", L"*.txt; *.lst"}, {L"All types", L"*.*"} }; 
             hr = pfd->SetFileTypes(_countof(aFileTypes), aFileTypes);
+            if (FailedShowMessage(hr))
+                break;
+
+            hr = pfd->SetDefaultExtension(L"txt");
             if (FailedShowMessage(hr))
                 break;
 
@@ -3930,7 +3953,7 @@ void CSearchDlg::CheckForUpdates(bool force)
     // check for newer versions
     bool doCheck = true;
     if (bPortable)
-        doCheck = !!_wtoi(g_iniFile.GetValue(L"global", L"CheckForUpdates", L"1"));
+        doCheck = g_iniFile.GetBoolValue(L"global", L"CheckForUpdates", true));
     else
         doCheck = !!DWORD(CRegStdDWORD(L"Software\\grepWin\\CheckForUpdates", 1));
     if (doCheck)
