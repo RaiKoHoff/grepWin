@@ -62,11 +62,19 @@ msgstr "..."
 msgid "/"
 msgstr "/"
 
+#. Resource IDs: (1045)
+msgid "<a href=\"https://tools.stefankueng.com\">Visit our website</a>"
+msgstr ""
+
+#. Resource IDs: (1052)
+msgid "<a>about grepWin</a>"
+msgstr ""
+
 #. Resource IDs: (1086)
 msgid ">"
 msgstr ""
 
-#. Resource IDs: (1052, 135)
+#. Resource IDs: (135)
 msgid "About grepWin"
 msgstr ""
 
@@ -465,10 +473,6 @@ msgstr ""
 msgid "Treat files as binary"
 msgstr ""
 
-#. Resource IDs: (1045)
-msgid "Visit our website"
-msgstr "Weblapunk meglátogatása"
-
 #. Resource IDs: (116)
 msgid "a regular expression used for searching. Press F1 for more info."
 msgstr "Egy reguláris kifejezés volt használva a keresésnél. További információért nyomja meg az F1-et."
@@ -575,6 +579,10 @@ msgstr "Keresés itt: '%s'"
 msgid "search string is empty"
 msgstr "a keresett szöveg üres"
 
+#. Resource IDs: (170, 171)
+msgid "start new grepWin window"
+msgstr ""
+
 #. Resource IDs: (114)
 msgid "the path(s) which is searched recursively.\r\nSeparate paths with the | symbol.\r\nExample: c:\\temp|d:\\logs"
 msgstr ""
@@ -582,4 +590,8 @@ msgstr ""
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr ""
+
+#. Resource IDs: (1024)
+msgid "⑂"
+msgstr "⑂"
 

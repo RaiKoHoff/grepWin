@@ -62,11 +62,19 @@ msgstr "..."
 msgid "/"
 msgstr "/"
 
+#. Resource IDs: (1045)
+msgid "<a href=\"https://tools.stefankueng.com\">Visit our website</a>"
+msgstr ""
+
+#. Resource IDs: (1052)
+msgid "<a>about grepWin</a>"
+msgstr ""
+
 #. Resource IDs: (1086)
 msgid ">"
 msgstr ">"
 
-#. Resource IDs: (1052, 135)
+#. Resource IDs: (135)
 msgid "About grepWin"
 msgstr "grepWin について"
 
@@ -465,10 +473,6 @@ msgstr "ファイルを UTF-8 として処理"
 msgid "Treat files as binary"
 msgstr "ファイルをバイナリとして処理"
 
-#. Resource IDs: (1045)
-msgid "Visit our website"
-msgstr "公式サイトを開く"
-
 #. Resource IDs: (116)
 msgid "a regular expression used for searching. Press F1 for more info."
 msgstr "検索に使用する正規表現 - F1キーで詳細情報を表示します。"
@@ -575,6 +579,10 @@ msgstr "ファイルをスキャン中 '%s'"
 msgid "search string is empty"
 msgstr "検索文字列が空です"
 
+#. Resource IDs: (170, 171)
+msgid "start new grepWin window"
+msgstr "新規 grepWin ウィンドウを開始"
+
 #. Resource IDs: (114)
 msgid "the path(s) which is searched recursively.\r\nSeparate paths with the | symbol.\r\nExample: c:\\temp|d:\\logs"
 msgstr "パスは再帰的に検索されます。\r\nパスを「|」で区切ることができます。\r\n指定例: c:\\temp|d:\\logs"
@@ -582,4 +590,8 @@ msgstr "パスは再帰的に検索されます。\r\nパスを「|」で区切�
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "フォルダを除外できます。CVS と images を除外する例です。\r\n指定例: ^(CVS|images)$\r\n注: Windows では「.svn」フォルダは隠されているため、通常はスキャンされません。"
+
+#. Resource IDs: (1024)
+msgid "⑂"
+msgstr "⑂"
 
