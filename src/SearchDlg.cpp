@@ -169,6 +169,7 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_regDate2High(L"Software\\grepWinNP3\\Date2High", 0)
     , m_regShowContent(L"Software\\grepWinNP3\\ShowContent", 0)
     , m_regOpacityNoFocus(L"Software\\grepWinNP3\\OpacityNoFocus", 100)
+    , m_regStayOnTop(L"Software\\grepWinNP3\\StayOnTop", 0)
     , m_AutoCompleteFilePatterns(bPortable ? &g_iniFile : nullptr)
     , m_AutoCompleteExcludeDirsPatterns(bPortable ? &g_iniFile : nullptr)
     , m_AutoCompleteSearchPatterns(bPortable ? &g_iniFile : nullptr)
@@ -177,6 +178,8 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_pBookmarksDlg(nullptr)
     , m_showContent(false)
     , m_showContentSet(false)
+    , m_OpacityNoFocus(100)
+    , m_bStayOnTop(false)
     , m_themeCallbackId(0)
 {
 }
@@ -330,6 +333,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 int menuItemsCount = GetMenuItemCount(hSysMenu);
                 if (menuItemsCount > 2)
                 {
+                    InsertMenu(hSysMenu, menuItemsCount - 2, MF_STRING | MF_BYPOSITION, ID_STAY_ON_TOP, TranslatedString(hResource, IDS_STAY_ON_TOP).c_str());
+                    InsertMenu(hSysMenu, menuItemsCount - 2, MF_SEPARATOR | MF_BYPOSITION, NULL, NULL);
                     InsertMenu(hSysMenu, menuItemsCount - 2, MF_STRING | MF_BYPOSITION, ID_ABOUTBOX, TranslatedString(hResource, IDS_ABOUT).c_str());
                     InsertMenu(hSysMenu, menuItemsCount - 2, MF_STRING | MF_BYPOSITION, ID_CLONE, TranslatedString(hResource, IDS_CLONE).c_str());
                     InsertMenu(hSysMenu, menuItemsCount - 2, MF_SEPARATOR | MF_BYPOSITION, NULL, NULL);
@@ -339,6 +344,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                     AppendMenu(hSysMenu, MF_SEPARATOR, NULL, NULL);
                     AppendMenu(hSysMenu, MF_STRING, ID_CLONE, TranslatedString(hResource, IDS_CLONE).c_str());
                     AppendMenu(hSysMenu, MF_STRING, ID_ABOUTBOX, TranslatedString(hResource, IDS_ABOUT).c_str());
+                    AppendMenu(hSysMenu, MF_SEPARATOR, NULL, NULL);
+                    AppendMenu(hSysMenu, MF_STRING, ID_STAY_ON_TOP, TranslatedString(hResource, IDS_STAY_ON_TOP).c_str());
                 }
             }
 
@@ -397,6 +404,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             }
 
             m_bUseRegex = (bPortable ? g_iniFile.GetBoolValue(L"global", L"UseRegex", false) : DWORD(m_regUseRegex));
+
+            m_bStayOnTop = (BYTE)(bPortable ? g_iniFile.GetBoolValue(L"global", L"StayOnTop", false) : DWORD(m_regStayOnTop));
 
             m_OpacityNoFocus = (BYTE)(bPortable ? g_iniFile.GetLongValue(L"global", L"OpacityNoFocus", 100) : DWORD(m_regOpacityNoFocus));
             m_OpacityNoFocus = (m_OpacityNoFocus > 100) ? 100 : m_OpacityNoFocus;
@@ -552,6 +561,10 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 else
                     ShowWindow(*this, SW_SHOW);
             }
+
+            SetWindowPos(*this, m_bStayOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            CheckMenuItem(GetSystemMenu(*this, FALSE), ID_STAY_ON_TOP, m_bStayOnTop ? MF_BYCOMMAND | MF_CHECKED : MF_BYCOMMAND | MF_UNCHECKED);
+
             InitResultList();
 
 #ifdef NP3_ALLOW_UPDATE
@@ -799,6 +812,13 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 case ID_CLONE:
                 {
                     CloneWindow();
+                }
+                break;
+                case ID_STAY_ON_TOP:
+                {
+                    m_bStayOnTop = !m_bStayOnTop;  // toggle
+                    SetWindowPos(*this, m_bStayOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+                    CheckMenuItem(GetSystemMenu(*this, FALSE), ID_STAY_ON_TOP, m_bStayOnTop ? MF_BYCOMMAND | MF_CHECKED : MF_BYCOMMAND | MF_UNCHECKED);
                 }
                 break;
             }
@@ -2776,6 +2796,7 @@ bool CSearchDlg::SaveSettings()
         g_iniFile.SetBoolValue(L"global", L"IncludeBinary", m_bIncludeBinary);
         g_iniFile.SetBoolValue(L"global", L"CreateBackup", m_bCreateBackup);
         g_iniFile.SetBoolValue(L"global", L"UTF8", m_bUTF8);
+        g_iniFile.SetBoolValue(L"global", L"StayOnTop", m_bStayOnTop);
         g_iniFile.SetBoolValue(L"global", L"Binary", m_bForceBinary);
         g_iniFile.SetBoolValue(L"global", L"CaseSensitive", m_bCaseSensitive);
         g_iniFile.SetBoolValue(L"global", L"DotMatchesNewline", m_bDotMatchesNewline);
@@ -2797,6 +2818,7 @@ bool CSearchDlg::SaveSettings()
         m_regIncludeBinary = (DWORD)m_bIncludeBinary;
         m_regCreateBackup = (DWORD)m_bCreateBackup;
         m_regUTF8 = (DWORD)m_bUTF8;
+        m_regStayOnTop          = (DWORD)m_bStayOnTop;
         m_regBinary = (DWORD)m_bForceBinary;
         m_regCaseSensitive = (DWORD)m_bCaseSensitive;
         m_regDotMatchesNewline = (DWORD)m_bDotMatchesNewline;
@@ -4118,24 +4140,26 @@ bool CSearchDlg::CloneWindow()
         return false;
     if (bPortable)
     {
-        FILE* pFile = NULL;
-        _wfopen_s(&pFile, g_iniPath.c_str(), L"wb");
-        g_iniFile.SaveFile(pFile);
-        fclose(pFile);
+        g_iniFile.SaveFile(g_iniPath.c_str());
     }
 
+    auto const dir   = CPathUtils::GetModuleDir();
+    auto const file  = CPathUtils::GetFileName(CPathUtils::GetModulePath());
+    auto const inifn = CPathUtils::GetFileName(g_iniPath);
+
     std::wstring arguments;
+    arguments += CStringUtils::Format(L" /inipath:\"%s\"", inifn.c_str());
     arguments += CStringUtils::Format(L" /searchpath:\"%s\"", m_searchpath.c_str());
     arguments += CStringUtils::Format(L" /searchfor:\"%s\"", m_searchString.c_str());
     arguments += CStringUtils::Format(L" /replacewith:\"%s\"", m_replaceString.c_str());
-    arguments += L" /new";
-    auto file = CPathUtils::GetModulePath();
+    arguments += L" /new"; // prevents searching of existing instance
 
     SHELLEXECUTEINFO sei = {0};
     sei.cbSize           = sizeof(SHELLEXECUTEINFO);
     sei.lpVerb           = TEXT("open");
     sei.lpFile           = file.c_str();
     sei.lpParameters     = arguments.c_str();
+    sei.lpDirectory      = dir.c_str();
     sei.nShow            = SW_SHOWNORMAL;
     ShellExecuteEx(&sei);
     return true;
