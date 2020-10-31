@@ -155,6 +155,10 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_showContentSet(false)
     , m_themeCallbackId(0)
 {
+    if (FAILED(CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(m_pTaskbarList.GetAddressOf()))))
+        m_pTaskbarList = nullptr;
+    else if (m_pTaskbarList)
+        m_pTaskbarList->HrInit();
 }
 
 CSearchDlg::~CSearchDlg(void)
@@ -199,12 +203,10 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_themeCallbackId = CTheme::Instance().RegisterThemeChangeCallback(
                 [this]() {
                     auto bDark = CTheme::Instance().IsDarkTheme();
-                    if (bDark)
-                        DarkModeHelper::Instance().AllowDarkModeForApp(bDark);
+                    DarkModeHelper::Instance().AllowDarkModeForApp(bDark);
                     CTheme::Instance().SetThemeForDialog(*this, bDark);
                     DarkModeHelper::Instance().AllowDarkModeForWindow(GetToolTipHWND(), bDark);
-                    if (!bDark)
-                        DarkModeHelper::Instance().AllowDarkModeForApp(bDark);
+                    DarkModeHelper::Instance().RefreshTitleBarThemeColor(*this, bDark);
                 });
             auto bDark = CTheme::Instance().IsDarkTheme();
             if (bDark)
@@ -721,6 +723,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             DialogEnableWindow(IDC_RESULTCONTENT, true);
             ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_HIDE);
             SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETMARQUEE, 0, 0);
+            if (m_pTaskbarList)
+                m_pTaskbarList->SetProgressState(*this, TBPF_NOPROGRESS);
             ShowWindow(GetDlgItem(*this, IDC_EXPORT), m_items.empty() ? SW_HIDE : SW_SHOW);
             KillTimer(*this, LABELUPDATETIMER);
         }
@@ -736,7 +740,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         break;
         case WM_HELP:
         {
-            CInfoDlg::ShowDialog(IDR_INFODLG, hResource);
+            CInfoDlg::ShowDialog(*this, IDR_INFODLG, hResource);
         }
         break;
         case WM_SYSCOMMAND:
@@ -963,7 +967,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
 
                 m_bReplace = id == IDC_REPLACE;
 
-                if (m_bReplace && (!m_bCreateBackup || m_replaceString.empty()) && m_bConfirmationOnReplace)
+                if (m_bReplace && !m_bCreateBackup && m_bConfirmationOnReplace)
                 {
                     auto nowarnifnobackup = bPortable ? !!_wtoi(g_iniFile.GetValue(L"settings", L"nowarnifnobackup", L"0")) : DWORD(CRegStdDWORD(L"Software\\grepWin\\nowarnifnobackup", FALSE));
                     if (!nowarnifnobackup)
@@ -993,6 +997,8 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_STOP).c_str());
                 ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_SHOW);
                 SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETMARQUEE, 1, 0);
+                if (m_pTaskbarList)
+                    m_pTaskbarList->SetProgressState(*this, TBPF_INDETERMINATE);
                 // now start the thread which does the searching
                 DWORD  dwThreadId = 0;
                 HANDLE hThread    = CreateThread(
