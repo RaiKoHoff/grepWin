@@ -330,7 +330,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
         }
         else
         {
-            CSearchDlg searchDlg(nullptr);
+            CSearchDlg   searchDlg(nullptr);
             if (parser.HasVal(L"searchini"))
             {
                 std::wstring inipath = parser.GetVal(L"searchini");
@@ -528,6 +528,8 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
                     searchDlg.SetSearchPath(spath);
                 }
             }
+            if (parser.HasKey(L"nosavesettings"))
+                searchDlg.SetNoSaveSettings(true);
 
             ret = (int)searchDlg.DoModal(hInstance, IDD_SEARCHDLG, NULL, IDR_SEARCHDLG);
         }
