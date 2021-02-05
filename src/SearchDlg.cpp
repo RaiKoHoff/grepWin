@@ -155,6 +155,7 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_showContent(false)
     , m_showContentSet(false)
     , m_themeCallbackId(0)
+    , m_bNoSaveSettings(false)
 {
     if (FAILED(CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(m_pTaskbarList.GetAddressOf()))))
         m_pTaskbarList = nullptr;
@@ -489,12 +490,11 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
             InitDialog(hwndDlg, IDI_GREPWIN);
 
-            WINDOWPLACEMENT wpl  = {0};
-            DWORD           size = sizeof(wpl);
+            WINDOWPLACEMENT wpl       = {0};
+            DWORD           size      = sizeof(wpl);
             std::wstring    winPosKey = L"windowpos_" + GetMonitorSetupHash();
             if (bPortable)
             {
-
                 std::wstring sPos = g_iniFile.GetValue(L"global", winPosKey.c_str(), L"");
 
                 if (!sPos.empty())
@@ -561,10 +561,13 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             else
             {
                 SaveSettings();
-                m_AutoCompleteFilePatterns.Save();
-                m_AutoCompleteSearchPatterns.Save();
-                m_AutoCompleteReplacePatterns.Save();
-                m_AutoCompleteSearchPaths.Save();
+                if (!m_bNoSaveSettings)
+                {
+                    m_AutoCompleteFilePatterns.Save();
+                    m_AutoCompleteSearchPatterns.Save();
+                    m_AutoCompleteReplacePatterns.Save();
+                    m_AutoCompleteSearchPaths.Save();
+                }
                 EndDialog(*this, IDCANCEL);
             }
         }
@@ -963,10 +966,13 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 m_AutoCompleteReplacePatterns.AddEntry(m_replaceString.c_str());
                 m_AutoCompleteSearchPaths.AddEntry(m_searchpath.c_str());
 
-                m_AutoCompleteFilePatterns.Save();
-                m_AutoCompleteSearchPatterns.Save();
-                m_AutoCompleteReplacePatterns.Save();
-                m_AutoCompleteSearchPaths.Save();
+                if (!m_bNoSaveSettings)
+                {
+                    m_AutoCompleteFilePatterns.Save();
+                    m_AutoCompleteSearchPatterns.Save();
+                    m_AutoCompleteReplacePatterns.Save();
+                    m_AutoCompleteSearchPaths.Save();
+                }
 
                 m_bReplace = id == IDC_REPLACE;
 
@@ -982,6 +988,16 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                         {
                             break;
                         }
+                    }
+                }
+                if (m_bReplace && m_bUTF8)
+                {
+                    auto utf8OptionText = GetDlgItemText(IDC_UTF8);
+                    auto msgtext = CStringUtils::Format(TranslatedString(hResource, IDS_REPLACEUTF8).c_str(),
+                                                        utf8OptionText.get());
+                    if (::MessageBox(*this, msgtext.c_str(), L"grepWin", MB_ICONWARNING | MB_YESNO | MB_DEFBUTTON2) != IDYES)
+                    {
+                        break;
                     }
                 }
                 m_bConfirmationOnReplace = true;
@@ -1038,10 +1054,13 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 else
                 {
                     SaveSettings();
-                    m_AutoCompleteFilePatterns.Save();
-                    m_AutoCompleteSearchPatterns.Save();
-                    m_AutoCompleteReplacePatterns.Save();
-                    m_AutoCompleteSearchPaths.Save();
+                    if (!m_bNoSaveSettings)
+                    {
+                        m_AutoCompleteFilePatterns.Save();
+                        m_AutoCompleteSearchPatterns.Save();
+                        m_AutoCompleteReplacePatterns.Save();
+                        m_AutoCompleteSearchPaths.Save();
+                    }
                     EndDialog(*this, IDCANCEL);
                 }
             }
@@ -1465,7 +1484,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                                 {
                                     if (needSeparator)
                                         file << separator;
-                                    file << CStringUtils::Format("%lld", item.matchlinesnumbers[i]);
+                                    file << CStringUtils::Format("%lu", item.matchlinesnumbers[i]);
                                     needSeparator = true;
                                 }
                                 if (includeMatchLineTexts)
@@ -2230,7 +2249,7 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
         {
             // use the first matching line in this file
             if (!inf.matchlinesnumbers.empty())
-                SearchReplace(cmd, L"%line%", CStringUtils::Format(L"%Id", inf.matchlinesnumbers[0]));
+                SearchReplace(cmd, L"%line%", CStringUtils::Format(L"%lu", inf.matchlinesnumbers[0]));
             else
                 SearchReplace(cmd, L"%line%", L"0");
         }
@@ -2404,6 +2423,8 @@ bool grepWin_is_regex_valid(const std::wstring& m_searchString)
 
 bool CSearchDlg::SaveSettings()
 {
+    if (m_bNoSaveSettings)
+        return true;
     // get all the information we need from the dialog
     auto buf     = GetDlgItemText(IDC_SEARCHPATH);
     m_searchpath = buf.get();
@@ -3478,7 +3499,7 @@ void CSearchDlg::SearchFile(CSearchInfo sinfo, const std::wstring& searchRoot, b
                         if (!m_bCreateBackup)
                             m_backupandtempfiles.insert(sinfo.filepath + L".grepwinreplaced");
                         boost::iostreams::mapped_file_source replaceinfile(m_bCreateBackup ? CUnicodeUtils::StdGetANSI(backupfile).c_str() : filepath.c_str());
-                        std::ofstream                        os(filepathout.c_str(), std::ios::out | std::ios::trunc);
+                        std::ofstream                        os(filepathout.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
                         std::ostream_iterator<char, char>    out(os);
                         regex_replace(out, replaceinfile.begin(), replaceinfile.end(), expression, replaceFmt, flags);
                         os.close();
