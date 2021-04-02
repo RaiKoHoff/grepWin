@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2008, 2011-2013, 2019-2020 - Stefan Kueng
+// Copyright (C) 2007-2008, 2011-2013, 2019-2021 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -22,6 +22,7 @@
 #include "RegexReplaceFormatter.h"
 #include "Theme.h"
 #include "DarkModeHelper.h"
+#include "ResString.h"
 #include <string>
 #include <Richedit.h>
 #pragma warning(push)
@@ -30,14 +31,14 @@
 #pragma warning(pop)
 
 CRegexTestDlg::CRegexTestDlg(HWND hParent)
-    : m_hParent(hParent)
-    , bDotMatchesNewline(false)
+    : bDotMatchesNewline(false)
     , bCaseSensitive(false)
+    , m_hParent(hParent)
     , m_themeCallbackId(0)
 {
 }
 
-CRegexTestDlg::~CRegexTestDlg(void)
+CRegexTestDlg::~CRegexTestDlg()
 {
 }
 
@@ -88,12 +89,11 @@ LRESULT CRegexTestDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
         case WM_GETMINMAXINFO:
         {
-            MINMAXINFO* mmi       = (MINMAXINFO*)lParam;
+            MINMAXINFO* mmi       = reinterpret_cast<MINMAXINFO*>(lParam);
             mmi->ptMinTrackSize.x = m_resizer.GetDlgRect()->right;
             mmi->ptMinTrackSize.y = m_resizer.GetDlgRect()->bottom;
             return 0;
         }
-        break;
         case WM_TIMER:
         {
             if (wParam == ID_REGEXTIMER)
@@ -123,7 +123,7 @@ LRESULT CRegexTestDlg::DoCommand(int id, int msg)
             buf           = GetDlgItemText(IDC_REPLACETEXT);
             m_replaceText = buf.get();
         }
-            // fall through
+            [[fallthrough]];
         case IDCANCEL:
             EndDialog(*this, id);
             break;
@@ -134,7 +134,7 @@ LRESULT CRegexTestDlg::DoCommand(int id, int msg)
                 auto buf      = GetDlgItemText(IDC_TEXTCONTENT);
                 m_textContent = std::wstring(buf.get());
 
-                SetTimer(*this, ID_REGEXTIMER, 300, NULL);
+                SetTimer(*this, ID_REGEXTIMER, 300, nullptr);
             }
         }
         break;
@@ -145,7 +145,7 @@ LRESULT CRegexTestDlg::DoCommand(int id, int msg)
                 auto buf     = GetDlgItemText(IDC_SEARCHTEXT);
                 m_searchText = buf.get();
 
-                SetTimer(*this, ID_REGEXTIMER, 300, NULL);
+                SetTimer(*this, ID_REGEXTIMER, 300, nullptr);
             }
         }
         break;
@@ -156,7 +156,7 @@ LRESULT CRegexTestDlg::DoCommand(int id, int msg)
                 auto buf      = GetDlgItemText(IDC_REPLACETEXT);
                 m_replaceText = buf.get();
 
-                SetTimer(*this, ID_REGEXTIMER, 300, NULL);
+                SetTimer(*this, ID_REGEXTIMER, 300, nullptr);
             }
         }
         break;
@@ -189,8 +189,8 @@ void CRegexTestDlg::DoRegex()
 
     if (!m_textContent.empty())
     {
-        std::wstring searchresult;
-        std::wstring replaceresult;
+        std::wstring searchResult;
+        std::wstring replaceResult;
         if (!m_searchText.empty())
         {
             std::wstring::const_iterator start, end;
@@ -217,14 +217,14 @@ void CRegexTestDlg::DoRegex()
                 replaceFmt.SetReplacePair(L"${filename}", L"file");
                 replaceFmt.SetReplacePair(L"${fileext}", L"txt");
 
-                replaceresult = regex_replace(m_textContent, expression, replaceFmt, rflags);
+                replaceResult = regex_replace(m_textContent, expression, replaceFmt, rflags);
 
                 while (boost::regex_search(start, end, whatc, expression, flags))
                 {
-                    if (!searchresult.empty())
-                        searchresult = searchresult + L"\r\n----------------------------\r\n";
+                    if (!searchResult.empty())
+                        searchResult = searchResult + L"\r\n----------------------------\r\n";
                     std::wstring c(whatc[0].first, whatc[0].second);
-                    searchresult = searchresult + c;
+                    searchResult = searchResult + c;
                     // update search position:
                     if (start == whatc[0].second)
                     {
@@ -242,14 +242,14 @@ void CRegexTestDlg::DoRegex()
             catch (const std::exception&)
             {
             }
-            if (searchresult.empty())
+            if (searchResult.empty())
                 SetDlgItemText(*this, IDC_REGEXMATCH, TranslatedString(hResource, IDS_NOMATCH).c_str());
             else
-                SetDlgItemText(*this, IDC_REGEXMATCH, searchresult.c_str());
+                SetDlgItemText(*this, IDC_REGEXMATCH, searchResult.c_str());
         }
-        if (!searchresult.empty())
-            SetDlgItemText(*this, IDC_REGEXMATCH, searchresult.c_str());
-        if (!replaceresult.empty())
-            SetDlgItemText(*this, IDC_REGEXREPLACED, replaceresult.c_str());
+        if (!searchResult.empty())
+            SetDlgItemText(*this, IDC_REGEXMATCH, searchResult.c_str());
+        if (!replaceResult.empty())
+            SetDlgItemText(*this, IDC_REGEXREPLACED, replaceResult.c_str());
     }
 }

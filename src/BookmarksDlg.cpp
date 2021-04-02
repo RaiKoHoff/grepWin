@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2010, 2012-2017, 2019-2020 - Stefan Kueng
+// Copyright (C) 2007-2010, 2012-2017, 2019-2021 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -22,6 +22,7 @@
 #include "BookmarksDlg.h"
 #include "NameDlg.h"
 #include "Theme.h"
+#include "ResString.h"
 #include <string>
 
 #pragma warning(push)
@@ -46,7 +47,7 @@ CBookmarksDlg::CBookmarksDlg(HWND hParent)
 {
 }
 
-CBookmarksDlg::~CBookmarksDlg(void)
+CBookmarksDlg::~CBookmarksDlg()
 {
 }
 
@@ -91,18 +92,17 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
         case WM_GETMINMAXINFO:
         {
-            MINMAXINFO* mmi       = (MINMAXINFO*)lParam;
+            MINMAXINFO* mmi       = reinterpret_cast<MINMAXINFO*>(lParam);
             mmi->ptMinTrackSize.x = m_resizer.GetDlgRect()->right;
             mmi->ptMinTrackSize.y = m_resizer.GetDlgRect()->bottom;
             return 0;
         }
-        break;
         case WM_CONTEXTMENU:
         {
             long x            = GET_X_LPARAM(lParam);
             long y            = GET_Y_LPARAM(lParam);
             HWND hListControl = GetDlgItem(*this, IDC_BOOKMARKS);
-            if (HWND(wParam) == hListControl)
+            if (reinterpret_cast<HWND>(wParam) == hListControl)
             {
                 int nCount = ListView_GetItemCount(hListControl);
                 if (nCount == 0)
@@ -123,7 +123,7 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
                 HMENU hMenu  = LoadMenu(hResource, MAKEINTRESOURCE(IDC_BKPOPUP));
                 HMENU hPopup = GetSubMenu(hMenu, 0);
                 CLanguage::Instance().TranslateMenu(hPopup);
-                TrackPopupMenu(hPopup, TPM_LEFTALIGN | TPM_RIGHTBUTTON, x, y, 0, *this, NULL);
+                TrackPopupMenu(hPopup, TPM_LEFTALIGN | TPM_RIGHTBUTTON, x, y, 0, *this, nullptr);
             }
         }
         break;
@@ -131,7 +131,7 @@ LRESULT CBookmarksDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lP
         {
             if (wParam == IDC_BOOKMARKS)
             {
-                LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE)lParam;
+                LPNMITEMACTIVATE lpnmitem = reinterpret_cast<LPNMITEMACTIVATE>(lParam);
                 if (lpnmitem->hdr.code == NM_DBLCLK)
                 {
                     PrepareSelected();
@@ -157,7 +157,7 @@ LRESULT CBookmarksDlg::DoCommand(int id, int /*msg*/)
         {
             PrepareSelected();
         }
-            // fall through
+            [[fallthrough]];
         case IDCANCEL:
         {
             WINDOWPLACEMENT wpl = {0};
@@ -241,11 +241,11 @@ void CBookmarksDlg::InitBookmarks()
     lvc.mask     = LVCF_TEXT;
     lvc.fmt      = LVCFMT_LEFT;
     lvc.cx       = -1;
-    lvc.pszText  = const_cast<LPWSTR>((LPCWSTR)sName.c_str());
+    lvc.pszText  = const_cast<LPWSTR>(static_cast<LPCWSTR>(sName.c_str()));
     ListView_InsertColumn(hListControl, 0, &lvc);
-    lvc.pszText = const_cast<LPWSTR>((LPCWSTR)sSearchString.c_str());
+    lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sSearchString.c_str()));
     ListView_InsertColumn(hListControl, 1, &lvc);
-    lvc.pszText = const_cast<LPWSTR>((LPCWSTR)sReplaceString.c_str());
+    lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sReplaceString.c_str()));
     ListView_InsertColumn(hListControl, 2, &lvc);
 
     m_bookmarks.Load();
