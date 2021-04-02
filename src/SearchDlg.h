@@ -44,15 +44,17 @@ using namespace Microsoft::WRL;
 
 #define ID_ABOUTBOX         0x0010
 #define ID_CLONE            0x0011
+
 #define ID_STAY_ON_TOP      0x0022
 
 #define ALPHA_OPAQUE         (255)
 
-enum ExecuteAction
+enum class ExecuteAction
 {
     None,
     Search,
-    Replace
+    Replace,
+    Capture
 };
 
 typedef struct _SearchFlags_t
@@ -146,21 +148,21 @@ protected:
 #endif
     bool                    CloneWindow();
 private:
-    static bool             NameCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             SizeCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             MatchesCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             PathCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             EncodingCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             ModifiedTimeCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             ExtCompareAsc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
+    static bool NameCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool SizeCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool MatchesCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool PathCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool EncodingCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool ModifiedTimeCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool ExtCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
 
-    static bool             NameCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             SizeCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             MatchesCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             PathCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             EncodingCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             ModifiedTimeCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
-    static bool             ExtCompareDesc(const CSearchInfo& Entry1, const CSearchInfo& Entry2);
+    static bool NameCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool SizeCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool MatchesCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool PathCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool EncodingCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool ModifiedTimeCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
+    static bool ExtCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
 
 private:
     HWND                    m_hParent;
