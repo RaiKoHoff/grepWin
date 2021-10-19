@@ -430,8 +430,8 @@ msgstr "検索済み %ldファイル, 省略 %ldファイル. %ldか所の一致
 
 #. Resource IDs: (173)
 #, c-format
-msgid "検索済み %ldファイル, 省略 %ldファイル. %ldか所の一致 %ld個のファイル中. %ld項目の結果を選択"
-msgstr ""
+msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
+msgstr "検索済み %ldファイル, 省略 %ldファイル. %ldか所の一致 %ld個のファイル中. %ld項目の結果を選択"
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
@@ -516,7 +516,7 @@ msgstr "等しい"
 
 #. Resource IDs: (122)
 msgid "greater than"
-msgstr "以下より大きい"
+msgstr "超過"
 
 #. Resource IDs: (103, 129)
 msgid "grepWinNP3"
@@ -553,7 +553,7 @@ msgstr "正規表現が無効です!"
 
 #. Resource IDs: (120)
 msgid "less than"
-msgstr "以下より小さい"
+msgstr "未満"
 
 #. Resource IDs: (111)
 msgid "no match"

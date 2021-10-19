@@ -214,7 +214,6 @@
 # pragma warning (disable: 4127 4503 4702 4786)
 #endif
 
-
 // Defines the conversion classes for different libraries. Before including
 // SimpleIni.h, set the converter that you wish you use by defining one of the
 // following symbols.
@@ -304,6 +303,10 @@ enum class SI_Error : int {
 #elif defined(SI_CONVERT_ICU)
 # define SI_HAS_WIDE_FILE
 # define SI_WCHAR_T     UChar
+#endif
+
+#ifndef IS_VALID_HANDLE
+#define IS_VALID_HANDLE(HNDL) ((HNDL) && ((HNDL) != INVALID_HANDLE_VALUE))
 #endif
 
 // ---------------------------------------------------------------------------
@@ -1435,22 +1438,23 @@ CSimpleIniTempl<SI_CHAR, SI_STRLESS, SI_CONVERTER>::LoadFile(
 )
 {
   if (a_pwszFile && a_pwszFile[0])
-{
-  HANDLE hFile = CreateFile(a_pwszFile,
-    GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  {
+    HANDLE hFile = CreateFile(a_pwszFile,
+      GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-    SI_ASSERT(hFile != INVALID_HANDLE_VALUE);
+    //~SI_ASSERT(hFile != INVALID_HANDLE_VALUE); // maybe .ini does not exist: allowed here
 
-  if (hFile == INVALID_HANDLE_VALUE) {
-    return SI_Error::SI_FILE;
+    if (!IS_VALID_HANDLE(hFile))
+    {
+      return SI_Error::SI_FILE;
+    }
+
+    SI_Error rc = LoadFile(hFile);
+
+    CloseHandle(hFile);
+    return rc;
   }
-
-  SI_Error rc = LoadFile(hFile);
-
-  CloseHandle(hFile);
-  return rc;
-}
   return SI_Error::SI_FILE;
 }
 
@@ -2641,22 +2645,22 @@ CSimpleIniTempl<SI_CHAR, SI_STRLESS, SI_CONVERTER>::SaveFile(
 ) const
 {
   if (a_pwszFile && a_pwszFile[0]) 
-{
-  HANDLE hFile = CreateFile(a_pwszFile,
-    GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-    nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  {
+    HANDLE hFile = CreateFile(a_pwszFile,
+      GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+      nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     SI_ASSERT(hFile != INVALID_HANDLE_VALUE);
 
-  if (hFile == INVALID_HANDLE_VALUE) {
-    return SI_Error::SI_FILE;
+    if (!IS_VALID_HANDLE(hFile)) {
+      return SI_Error::SI_FILE;
+    }
+
+    SI_Error rc = SaveFile(hFile, a_bAddSignature);
+
+    CloseHandle(hFile);
+    return rc;
   }
-
-  SI_Error rc = SaveFile(hFile, a_bAddSignature);
-
-  CloseHandle(hFile);
-  return rc;
-}
   return SI_Error::SI_FILE;
 }
 
