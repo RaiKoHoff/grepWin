@@ -1,4 +1,4 @@
-﻿// sktoolslib - common files for SK tools
+// sktoolslib - common files for SK tools
 
 // Copyright (C) 2019-2021 - Stefan Kueng
 
@@ -107,7 +107,6 @@ private:
     using RefreshImmersiveColorPolicyStateFn = void(WINAPI* )();
     using GetIsImmersiveColorUsingHighContrastFn = BOOL(WINAPI* )(IMMERSIVE_HC_CACHE_MODE mode);
     using FlushMenuThemesFn = void(WINAPI* )();
-    using OpenNcThemeDataFpn = HTHEME(WINAPI* )(HWND hWnd, LPCWSTR pszClassList);
     using SetWindowCompositionAttributeFpn = BOOL(WINAPI* )(HWND hwnd, WINDOWCOMPOSITIONATTRIBDATA* data);
 
     AllowDarkModeForAppFpn                 m_pAllowDarkModeForApp                  = nullptr;
