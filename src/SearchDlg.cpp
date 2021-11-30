@@ -33,7 +33,6 @@
 #include "BookmarksDlg.h"
 #include "MultiLineEditDlg.h"
 #include "AboutDlg.h"
-#include "InfoDlg.h"
 #include "DropFiles.h"
 #include "RegexReplaceFormatter.h"
 #include "LineData.h"
@@ -772,7 +771,11 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         break;
         case WM_HELP:
         {
-            CInfoDlg::ShowDialog(*this, IDR_INFODLG, hResource);
+            if (m_rtfDialog == nullptr)
+            {
+                m_rtfDialog = std::make_unique<CInfoRtfDialog>();
+            }
+            m_rtfDialog->ShowModeless(g_hInst, *this, "grepWin help", IDR_INFODLG, L"RTF", IDI_GREPWIN, 400, 600);
         }
         break;
         case WM_SYSCOMMAND:
@@ -980,13 +983,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 m_listItems.clear();
                 m_listItems.reserve(500000);
                 m_backupAndTempFiles.clear();
-                if (m_searchString.empty())
-                {
-                    // switch to file view
-                    CheckRadioButton(*this, IDC_RESULTFILES, IDC_RESULTCONTENT, IDC_RESULTFILES);
-                    m_showContent = false;
-                    InitResultList();
-                }
 
                 HWND hListControl = GetDlgItem(*this, IDC_RESULTLIST);
                 ListView_SetItemCount(hListControl, 0);
@@ -1047,6 +1043,14 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 if (m_bReplace)
                 {
                     m_replaceString = ExpandString(m_replaceString);
+                }
+
+                if (m_searchString.empty() || m_bNotSearch)
+                {
+                    // switch to file view
+                    CheckRadioButton(*this, IDC_RESULTFILES, IDC_RESULTCONTENT, IDC_RESULTFILES);
+                    m_showContent = false;
+                    InitResultList();
                 }
 
                 InterlockedExchange(&m_dwThreadRunning, TRUE);
