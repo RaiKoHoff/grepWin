@@ -8,8 +8,8 @@
 "Content-Transfer-Encoding: 8bit\n"
 #
 # encoding: UTF-8
-# Language: Dutch (Netherlands) resources
-# Translator: (nl-NL) Nederlandse vertaling door Stephan-P
+# Language: Spanish Mexican (Mexico) resources
+# Translator: (es-MX) Traducción española mexicana por Ghost
 #
 
 #, fuzzy
@@ -35,27 +35,27 @@ msgstr ""
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
-msgstr "%ld meer overeenkomsten"
+msgstr "%ld más resultados"
 
 #. Resource IDs: (1069)
 msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %pattern% with the search string."
-msgstr "%path% wordt vervangen door het pad van het bestand, %line% door de juiste regel, %pattern% met de zoekreeks."
+msgstr "%path% es reemplazada con la ruta del archivo, %line% por la línea a ir, %pattern% con la cadena de búsqueda."
 
 #. Resource IDs: (119)
 msgid "&About grepWinNP3..."
-msgstr "&Over grepWinNP3..."
+msgstr "&Acerca de grepWinNP3..."
 
 #. Resource IDs: (1049)
 msgid "&Replace"
-msgstr "&Vervangen"
+msgstr "&Reemplazar"
 
 #. Resource IDs: (123)
 msgid "&Search"
-msgstr "&Zoeken"
+msgstr "&Buscar"
 
 #. Resource IDs: (1003)
 msgid "&Whole word"
-msgstr "Heel &woord"
+msgstr "&Palabra completa"
 
 #. Resource IDs: (1013)
 msgid "..."
@@ -67,11 +67,11 @@ msgstr "/"
 
 #. Resource IDs: (1045)
 msgid "Visit Stefan Küng's website"
-msgstr "Bezoek de website van Stefan Küng"
+msgstr "Visitar el sitio web de Stefan Küng"
 
 #. Resource IDs: (1052)
 msgid "<a>about grepWinNP3...</a>"
-msgstr "<a>over grepWinNP3...</a>"
+msgstr "<a>acerca de grepWinNP3...</a>"
 
 #. Resource IDs: (1086)
 msgid ">>>"
@@ -79,112 +79,112 @@ msgstr ">>>"
 
 #. Resource IDs: (135)
 msgid "About grepWinNP3"
-msgstr "Over grepWinNP3"
+msgstr "Acerca de grepWinNP3"
 
 #. Resource IDs: (1021)
 msgid "Add to Presets..."
-msgstr "Toevoegen aan Voorinstelling..."
+msgstr "Añadir a preestablecidos..."
 
 #. Resource IDs: (155)
 msgid "All Files"
-msgstr "Alle bestanden"
+msgstr "Todos los archivos"
 
 #. Resource IDs: (1078)
 msgid "All dates"
-msgstr "Elke datum"
+msgstr "Todas las fechas"
 
 #. Resource IDs: (1005)
 msgid "All sizes"
-msgstr "Elke grootte"
+msgstr "Todos los tamaños"
 
 #. Resource IDs: (124)
 #, c-format
 msgid "Are you sure you want to replace\n%s\nwith\n%s\nwithout creating backups?"
-msgstr "Wilt u echt\n%s\ndoor\n%s\nvervangen zonder een back-up te maken?"
+msgstr "¿Estás seguro de querer reemplazar\s%s\ncon\n%s\nsin crear respaldos?"
 
 #. Resource IDs: (1081)
 msgid "Between"
-msgstr "Tussen"
+msgstr "Entre fechas"
 
 #. Resource IDs: (2)
 msgid "Cancel"
-msgstr "Afbreken"
+msgstr "Cancelar"
 
 #. Resource IDs: (169)
 msgid "Capture search"
-msgstr "Zoekopdracht vastleggen"
+msgstr "Capture búsqueda"
 
 #. Resource IDs: (1088)
 msgid "Check for updates"
-msgstr "Controleren op updates"
+msgstr "Checar actualizaciones"
 
 #. Resource IDs: (1068)
 msgid "Command line to start an editor at a specific line:"
-msgstr "Opdrachtregel om een Editor op een specifieke regel te openen"
+msgstr "Línea de comandos para iniciar un editor en la línea especificada:"
 
 #. Resource IDs: (1060)
 msgid "Content"
-msgstr "Inhoud"
+msgstr "Contenido"
 
 #. Resource IDs: (145)
 msgid "Copy filename to clipboard"
-msgstr "Bestandsnaam naar klembord kopiëren"
+msgstr "Copiar el nombre de archivo al portapapeles"
 
 #. Resource IDs: (146)
 msgid "Copy filenames to clipboard"
-msgstr "Bestandsnamen naar klembord kopiëren"
+msgstr "Copiar los nombres de archivos al portapapeles"
 
 #. Resource IDs: (143)
 msgid "Copy path to clipboard"
-msgstr "Bestandspad naar klembord kopiëren"
+msgstr "Copiar la ruta al portapapeles"
 
 #. Resource IDs: (144)
 msgid "Copy paths to clipboard"
-msgstr "Bestandspaden naar klembord kopiëren"
+msgstr "Copiar las rutas al portapapeles"
 
 #. Resource IDs: (147)
 msgid "Copy text result to clipboard"
-msgstr "Tekstresultaat naar klembord kopiëren"
+msgstr "Copiar el texto resultante al portapapeles"
 
 #. Resource IDs: (148)
 msgid "Copy text results to clipboard"
-msgstr "Tekstresultaten naar klembord kopiëren"
+msgstr "Copiar los textos resultantes al portapapeles"
 
 #. Resource IDs: (1029)
 msgid "Create backup files"
-msgstr "Back-upbestanden aanmaken"
+msgstr "Crear un respaldo de archivos"
 
 #. Resource IDs: (1077)
 msgid "Create backup files in a separate folder"
-msgstr "Back-upbestanden in een aparte map aanmaken"
+msgstr "Crear el respaldo de archivos en una carpeta separada"
 
 #. Resource IDs: (1064)
 msgid "Dark mode"
-msgstr "Donkere modus"
+msgstr "Modo obscuro"
 
 #. Resource IDs: (139)
 msgid "Date modified"
-msgstr "Datum gewijzigd"
+msgstr "Fecha de modificación"
 
 #. Resource IDs: (137)
 msgid "Dialog"
-msgstr "Dialoog"
+msgstr "Diálogo"
 
 #. Resource IDs: (1078)
 msgid "Don't warn when replacing without creating backups"
-msgstr "Geen waarschuwing bij vervanging zonder back-up"
+msgstr "No advertir al reemplazar sin haber creado copias de seguridad"
 
 #. Resource IDs: (1051)
 msgid "Dot matches newline"
-msgstr "Punt betekent nieuwe regel"
+msgstr "Punto significa nueva línea"
 
 #. Resource IDs: (1056)
 msgid "Double-Click to select a preset"
-msgstr "Dubbelklik om voorinstelling te selecteren"
+msgstr "Doble clic para seleccionar un preestablecido"
 
 #. Resource IDs: (65535 - PopupMenu)
 msgid "Dummy"
-msgstr "Dummy"
+msgstr "Ficticio"
 
 #. Resource IDs: (1067)
 msgid "Editor"
@@ -192,27 +192,27 @@ msgstr "Editor"
 
 #. Resource IDs: (138)
 msgid "Encoding"
-msgstr "Codering"
+msgstr "Codificación"
 
 #. Resource IDs: (1056)
 msgid "Enter a name for the regex:"
-msgstr "Voer een naam in voor de Regex:"
+msgstr "Introduzca un nombre para el regex:"
 
 #. Resource IDs: (1062)
 msgid "Escape key closes grepWinNP3"
-msgstr "grepWinNP3 afsluiten met Esc"
+msgstr "La tecla Escape cierra grepWinNP3"
 
 #. Resource IDs: (1041)
 msgid "Exclude dirs (Regex):"
-msgstr "Exclusief mappen (Regex):"
+msgstr "Excluir los directorios (Regex):"
 
 #. Resource IDs: (164)
 msgid "Export resultlist"
-msgstr "Resultatenlijst exporteren"
+msgstr "Exportar la lista de resultados"
 
 #. Resource IDs: (163)
 msgid "Export results..."
-msgstr "Resultaten exporteren..."
+msgstr "Exportar los resultados..."
 
 #. Resource IDs: (158)
 msgid "Ext"
@@ -220,11 +220,11 @@ msgstr "Ext"
 
 #. Resource IDs: (1039)
 msgid "File Names match:\nuse '|' to separate multiple text match patterns, prepen&d '-' to exclude"
-msgstr "Bestandnamen komen overeen:\ngebruik '|' om meerdere patronen te scheiden, prefix '-' om uit te sluiten"
+msgstr "Nombres de archivo:\nutilice '|' para separar múltiples patrones, prefije '-' para excluir"
 
 #. Resource IDs: (1059)
 msgid "Files"
-msgstr "Bestanden"
+msgstr "Archivos"
 
 #. Resource IDs: (109)
 msgid "GREPWINNP3"
@@ -232,35 +232,35 @@ msgstr "GREPWINNP3"
 
 #. Resource IDs: (156)
 msgid "If enabled, a backup folder is created inside the folder that's searched/replaced in, and the files are backed up into that folder"
-msgstr "Indien ingeschakeld, wordt er een back-up map gemaakt in de map die wordt doorzocht/vervangen en van de bestanden wordt aldaar een back-up gemaakt"
+msgstr "Si está activado, una carpeta de respaldo se crea dentro de la cual se busca/reemplaza, y los archivos son respaldados en esta"
 
 #. Resource IDs: (1050)
 msgid "Include binary files"
-msgstr "Binaire bestanden"
+msgstr "Incluir archivos binarios"
 
 #. Resource IDs: (1010)
 msgid "Include hidden items"
-msgstr "Verborgen bestanden"
+msgstr "Incluir archivos ocultos"
 
 #. Resource IDs: (1062)
 msgid "Include search path"
-msgstr "Inclusief zoekpad"
+msgstr "Incluir ruta de búsqueda"
 
 #. Resource IDs: (1011)
 msgid "Include subfolders"
-msgstr "Inclusief submappen"
+msgstr "Incluir subcarpetas"
 
 #. Resource IDs: (1009)
 msgid "Include system items"
-msgstr "Inclusief systeembestanden"
+msgstr "Archivos del sistema"
 
 #. Resource IDs: (153)
 msgid "Invalid path!"
-msgstr "Ongeldig pad!"
+msgstr "¡Ruta inválida!"
 
 #. Resource IDs: (161)
 msgid "Inverse search (NOT searchstring)"
-msgstr "Omgekeerd zoeken (GEEN zoekreeks)"
+msgstr "Búsqueda inversa (NO cadena de búsqueda)"
 
 #. Resource IDs: (1019)
 msgid "KB"
@@ -268,228 +268,228 @@ msgstr "KB"
 
 #. Resource IDs: (1075)
 msgid "Language:"
-msgstr "Taal:"
+msgstr "Idioma:"
 
 #. Resource IDs: (1017)
 msgid "Limit search"
-msgstr "Zoekopdracht begrenzen"
+msgstr "Limitar búsqueda"
 
 #. Resource IDs: (134)
 msgid "Line"
-msgstr "Regel"
+msgstr "Línea"
 
 #. Resource IDs: (150)
 #, c-format
 msgid "Line %5ld : %30s\n"
-msgstr "Regel %5ld : %30s\n"
+msgstr "Línea %5ld : %30s\n"
 
 #. Resource IDs: (135)
 msgid "Matches"
-msgstr "Komt overeen met"
+msgstr "Coincidencias"
 
 #. Resource IDs: (104)
 msgid "Name"
-msgstr "Naam"
+msgstr "Nombre"
 
 #. Resource IDs: (1079)
 msgid "Newer than"
-msgstr "Nieuwer dan"
+msgstr "Más nuevo que"
 
 #. Resource IDs: (115)
 msgid "Newline is matched by '.'"
-msgstr "Regeleinde komt overeen met '.'"
+msgstr "Nueva línea coincide con '.'"
 
 #. Resource IDs: (1)
 msgid "OK"
-msgstr "OK"
+msgstr "Aceptar"
 
 #. Resource IDs: (1080)
 msgid "Older than"
-msgstr "Ouder dan"
+msgstr "Más antiguo que"
 
 #. Resource IDs: (1063)
 msgid "Only one instance"
-msgstr "Slechts één instantie"
+msgstr "Sólo una instancia"
 
 #. Resource IDs: (142)
 msgid "Open containing folder"
-msgstr "Onderliggende map openen"
+msgstr "Abrir carpeta"
 
 #. Resource IDs: (141)
 msgid "Open with Editor"
-msgstr "Openen met Editor"
+msgstr "Abrir con editor"
 
 #. Resource IDs: (1056)
 msgid "Paste text to test the regex with:"
-msgstr "Voeg tekst in om de Regex te testen:"
+msgstr "Pegue el texto para probar el regex con:"
 
 #. Resource IDs: (137)
 msgid "Path"
-msgstr "Pad"
+msgstr "Ruta"
 
 #. Resource IDs: (131)
 msgid "Preset name"
-msgstr "Naam Voorinstelling"
+msgstr "Nombre del preestablecido"
 
 #. Resource IDs: (1022)
 msgid "Presets..."
-msgstr "Voorinstellingen..."
+msgstr "Preestablecidos..."
 
 #. Resource IDs: (132)
 msgid "Presets"
-msgstr "Voorinstellingen"
+msgstr "Preestablecidos"
 
 #. Resource IDs: (1065)
 msgid "Press F1 for help..."
-msgstr "Druk op F1 voor hulp..."
+msgstr "Presione F1 para ayuda..."
 
 #. Resource IDs: (154)
 msgid "Programs"
-msgstr "Programma's"
+msgstr "Programas"
 
 #. Resource IDs: (32775 - Menu)
 msgid "Re&name Preset"
-msgstr "Voorinstelling her&noemen"
+msgstr "Re&nombrar preestablecido"
 
 #. Resource IDs: (130)
 msgid "Regex Test"
-msgstr "Regex Test"
+msgstr "Prueba regex"
 
 #. Resource IDs: (1046)
 msgid "Regex match"
-msgstr "Regex"
+msgstr "Modelo Regex"
 
 #. Resource IDs: (65535)
 msgid "Regex replace string:"
-msgstr "Regex tekenreeks vervangen"
+msgstr "Regex reemplaza por cadena:"
 
 #. Resource IDs: (1001)
 msgid "Regex search"
-msgstr "Regex zoeken"
+msgstr "Búsqueda regex"
 
 #. Resource IDs: (65535)
 msgid "Regex search string:"
-msgstr "Regex tekenreeks"
+msgstr "Cadena de búsqueda Regex:"
 
 #. Resource IDs: (152)
 msgid "Relative paths are not allowed. Please enter an absolute path!"
-msgstr "Relatieve paden niet toegestaan. Geef een absoluut pad op!"
+msgstr "Las rutas relativas no son permitidas. ¡Por favor ingrese una ruta absoluta!"
 
 #. Resource IDs: (32771 - Menu)
 msgid "Remo&ve Preset"
-msgstr "Voorinstelling verwijderen"
+msgstr "Eliminar preestablecido"
 
 #. Resource IDs: (106)
 msgid "Replace string"
-msgstr "Tekenreeks vervangen"
+msgstr "Reemplazar cadena"
 
 #. Resource IDs: (1027)
 msgid "Replace with/\nCapture format:"
-msgstr "Vervangen door/\nOpmaak:"
+msgstr "Reemplazar con/\ncapturar formato:"
 
 #. Resource IDs: (126)
 msgid "S&top"
-msgstr "S&toppen"
+msgstr "De&tener"
 
 #. Resource IDs: (1, 1016)
 msgid "Search"
-msgstr "Zoeken"
+msgstr "Buscar"
 
 #. Resource IDs: (1026)
 msgid "Search &for:"
-msgstr "Zoeken naar:"
+msgstr "Buscar por:"
 
 #. Resource IDs: (1042)
 msgid "Search case-sensitive"
-msgstr "Hoofdlettergevoelig"
+msgstr "Distinguir mayús.-minús."
 
 #. Resource IDs: (1015)
 msgid "Search in"
-msgstr "Zoeken in"
+msgstr "Buscar en"
 
 #. Resource IDs: (162)
 msgid "Search in found files"
-msgstr "Zoek in gevonden bestanden"
+msgstr "Buscar en archivos encontrados"
 
 #. Resource IDs: (1018)
 msgid "Search results"
-msgstr "Zoekresultaat"
+msgstr "Resultados de la búsqueda"
 
 #. Resource IDs: (105)
 msgid "Search string"
-msgstr "Tekenreeks"
+msgstr "Cadena de búsqueda"
 
 #. Resource IDs: (128)
 #, c-format
 msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "%ld bestanden doorzocht, %ld bestanden overgeslagen. %ld overeenkomsten gevonden in %ld bestanden."
+msgstr "Se buscó en %ld archivos, y se omitieron %ld archivos. Se encontraron %ld coincidencias en %ld archivos."
 
 #. Resource IDs: (173)
 #, c-format
 msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr "%ld bestanden doorzocht, %ld bestanden overgeslagen. %ld overeenkomsten gevonden in %ld bestanden. %ld resultaten geselecteerd."
+msgstr "Se buscó en %ld archivos, y se omitieron %ld archivos. Se encontraron %ld coincidencias en %ld archivos. %ld resultados seleccionados."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
-msgstr "Kies Editor programma..."
+msgstr "Seleccione una aplicación de editor..."
 
 #. Resource IDs: (127)
 msgid "Select path to search"
-msgstr "Kies zoekpad"
+msgstr "Seleccione ruta a buscar"
 
 #. Resource IDs: (1071)
 msgid "Settings..."
-msgstr "Instellingen..."
+msgstr "Configuración..."
 
 #. Resource IDs: (133)
 msgid "Size"
-msgstr "Grootte"
+msgstr "Tamaño"
 
 #. Resource IDs: (1006)
 msgid "Size is"
-msgstr "Grootte is"
+msgstr "Tamaño es"
 
 #. Resource IDs: (1028)
 msgid "Test regex..."
-msgstr "Regex testen..."
+msgstr "Probar regex..."
 
 #. Resource IDs: (136)
 msgid "Text"
-msgstr "Tekst"
+msgstr "Texto"
 
 #. Resource IDs: (1048)
 msgid "Text match"
-msgstr "Tekst"
+msgstr "Modelo de texto"
 
 #. Resource IDs: (1002)
 msgid "Text search"
-msgstr "Tekst zoeken"
+msgstr "Buscar texto"
 
 #. Resource IDs: (160)
 #, c-format
 msgid "The path \"%s\" does not exist or is not accessible!"
-msgstr ""
+msgstr "¡La ruta \"%s\" no existe o no es accesible!"
 
 #. Resource IDs: (65535)
 msgid "The regex search string matches:"
-msgstr "De Regex zoekreeks komt overeen met:"
+msgstr "La cadena de búsqueda regex coincide con:"
 
 #. Resource IDs: (65535)
 msgid "The resulting text after replacing:"
-msgstr "Resultaattekst na vervanging:"
+msgstr "El texto resultante después de reemplazar:"
 
 #. Resource IDs: (1053)
 msgid "Treat files as UTF-8"
-msgstr "Als UTF-8 behandelen"
+msgstr "Tratar archivos como UTF-8"
 
 #. Resource IDs: (1054)
 msgid "Treat files as binary"
-msgstr "Als binair behandelen"
+msgstr "Tratar archivos como binario"
 
 #. Resource IDs: (172)
 #, c-format
 msgid "You have the option \"%s\" enabled.\r\nWhen replacing, this option can lead to corrupted files.\r\nDo you want to proceed anyway?"
-msgstr "De optie \"%s\" is ingeschakeld.\r\nBij het vervangen kan deze optie leiden tot beschadigde bestanden.\r\nWil je toch doorgaan?"
+msgstr "Tiene la opción \"%s\" habilitada.\r\nAl reemplazar, esta opción puede conducir a archivos corruptos.\r\n¿Desea continuar de todos modos?"
 
 #. Resource IDs: (1025)
 msgid "\\"
@@ -497,31 +497,31 @@ msgstr "\\"
 
 #. Resource IDs: (116)
 msgid "a regular expression used for searching. Press F1 for more info."
-msgstr "er wordt een reguliere expressie gebruikt bij het zoeken. Druk op F1 voor meer info."
+msgstr "una expresión regular utilizada para buscar. Presione F1 para más información."
 
 #. Resource IDs: (125)
 msgid "an empty string"
-msgstr "een lege string"
+msgstr "una cadena vacía"
 
 #. Resource IDs: (130)
 msgid "binary"
-msgstr "binair"
+msgstr "binario"
 
 #. Resource IDs: (118)
 msgid "click to edit the text as a multiline text"
-msgstr "klik om de tekst te bewerken als tekst met meerdere regels"
+msgstr "clic para editar el texto como un texto multilínea"
 
 #. Resource IDs: (159)
 msgid "Dark Mode requires at least Win10 v1803, and it must be enabled in the Windows system settings."
-msgstr "Donkere modus vereist ten minste Win10 v1803 en moet worden ingeschakeld in Windows instellingen."
+msgstr "El modo obscuro requiere al menos Win10 v1803, y debe estar habilitado en la configuración de Windows."
 
 #. Resource IDs: (121)
 msgid "equal to"
-msgstr "gelijk aan"
+msgstr "igual a"
 
 #. Resource IDs: (122)
 msgid "greater than"
-msgstr "groter dan"
+msgstr "mayor que"
 
 #. Resource IDs: (103, 129)
 msgid "grepWinNP3"
@@ -530,88 +530,88 @@ msgstr "grepWinNP3"
 #. Resource IDs: (168)
 #, c-format
 msgid "grepWinNP3 %s is available"
-msgstr "grepWinNP3 %s is beschikbaar"
+msgstr "grepWinNP3 %s está disponible"
 
 #. Resource IDs: (138)
 msgid "grepWinNP3 Settings"
-msgstr "grepWinNP3 Instellingen"
+msgstr "Opciones de grepWinNP3"
 
 #. Resource IDs: (157)
 msgid "hold down the shift key to find files that DO NOT contain the search string"
-msgstr "houd de shift-toets ingedrukt om bestanden te vinden die de zoekreeks NIET bevatten"
+msgstr "mantenga presionado la tecla shift para buscar archivos que NO contengan la cadena de búsqueda"
 
 #. Resource IDs: (165)
 msgid "include file paths"
-msgstr "inclusief bestandspaden"
+msgstr "incluir rutas de archivo"
 
 #. Resource IDs: (166)
 msgid "include match line numbers"
-msgstr "inclusief overeenkomstige regelnummers"
+msgstr "incluir números de línea correspondientes"
 
 #. Resource IDs: (167)
 msgid "include match line text"
-msgstr "inclusief overeenkomstige regeltekst"
+msgstr "incluir el texto de línea correspondiente"
 
 #. Resource IDs: (132)
 msgid "invalid regex!"
-msgstr "ongeldig regex!"
+msgstr "¡regex inválido!"
 
 #. Resource IDs: (120)
 msgid "less than"
-msgstr "kleiner dan"
+msgstr "menos que"
 
 #. Resource IDs: (111)
 msgid "no match"
-msgstr "geen overeenkomst"
+msgstr "sin coincidencia"
 
 #. Resource IDs: (110)
 msgid "no text to replace with"
-msgstr "geen tekst om te vervangen"
+msgstr "no hay texto para reemplazar"
 
 #. Resource IDs: (107)
 msgid "no text to test with available"
-msgstr "geen tekst beschikbaar om te testen"
+msgstr "no hay texto disponible para probar"
 
 #. Resource IDs: (1074)
 msgid "Number of NULL bytes per MB allowed for a file to still be considered text instead of binary"
-msgstr "Aantal NULL-bytes per MB waarmee een bestand nog steeds wordt beschouwd als tekst in plaats van binair"
+msgstr "Número de bytes NULL por MB permitidos para que un archivo se considere como texto en lugar de binario"
 
 #. Resource IDs: (112)
 msgid "only files that match this pattern are searched.\nUse '|' as the delimiter.\nExample: *.cpp|*.h"
-msgstr "alleen bestanden die overeenkomen met dit patroon, worden doorzocht.\nGebruik '|' als scheidingsteken.\nVoorbeeld: *.cpp|*.h"
+msgstr "solo archivos que coincidan con este patrón son buscados.\nUse '|' como el delimitador.\nEjemplo: *.cpp|*.h"
 
 #. Resource IDs: (129)
 msgid "read error"
-msgstr "leesfout"
+msgstr "error de lectura"
 
 #. Resource IDs: (131)
 msgid "regex ok"
-msgstr "Regex ok"
+msgstr "regex ok"
 
 #. Resource IDs: (117)
 msgid "reuse grepWinNP3 instances."
-msgstr "grepWinNP3-instanties hergebruiken."
+msgstr "reutilizar instancias de grepWinNP3."
 
 #. Resource IDs: (151)
 #, c-format
 msgid "scanning file '%s'"
-msgstr "bestand doorzoeken: '%s'"
+msgstr "escaneando el archivo '%s'"
 
 #. Resource IDs: (108)
 msgid "search string is empty"
-msgstr "zoekreeks is leeg"
+msgstr "La cadena de búsqueda está vacía"
 
 #. Resource IDs: (170, 171)
 msgid "Start new grepWinNP3 window"
-msgstr "grepWinNP3 in nieuw venster starten"
+msgstr "Iniciar una nueva ventana grepWinNP3"
 
 #. Resource IDs: (114)
 msgid "the path(s) which is searched recursively.\nSeparate paths with the '|' symbol.\nExample: c:\\temp|d:\\logs"
-msgstr "het pad wordt recursief doorzocht.\nScheidt de paden met het'|'symbool.\nVoorbeeld: c:\\temp|d:\\logs"
+msgstr "la(s) ruta(s) en las que se busca(n) recursivamente.\nSepare las rutas con el símbolo |.\nEjemplo: c:\\temp|d:\\logs"
 
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\nExample: ^(CVS|images)$\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
-msgstr "Je kunt mappen uitsluiten, bv. CVS en afbeeldingen.\nVoorbeeld: ^(CVS|images)$\nOpmerking: '.svn' mappen zijn in Windows normaal verborgen en worden daarom normaal niet doorzocht."
+msgstr "puede excluir directorios, ej. CVS e imágenes.\nEjemplo: ^(CVS|imágenes)$\nNota, las carpetas '.svn' están 'ocultas' en Windows, por lo que usualmente no son escaneadas."
 
 #. Resource IDs: (1024)
 msgid "Y"
@@ -619,21 +619,21 @@ msgstr "Y"
 
 #. Resource IDs: (3000)
 msgid "Reset"
-msgstr "Herstellen"
+msgstr "Restablecer"
 
 #. Resource IDs: (3001)
 msgid "Notepad3's grepWin(NP3)-mod of Stefan Küng's great tool!"
-msgstr "grepWin(NP3)-mod in Notepad3 van de geweldige tool van Stefan Küng!"
+msgstr "¡La gran herramienta grepWin(NP3)-mod en Notepad3 de Stefan Küng!"
 
 #. Resource IDs: (3004)
 msgid "Max # of concurrent worker"
-msgstr "Max # gelijktijdige processen"
+msgstr "Máx. n° de trabajadores concurrentes"
 
 #. Resource IDs: (3005)
 msgid "This adds a new entry to the context menu named 'Open with Editor'"
-msgstr "Dit voegt in het contextmenu een item toe: 'Openen in Editor'"
+msgstr "Esto añade una nueva entrada al menú contextual nombrado 'Abrir con editor'"
 
 #. Resource IDs: (3006)
 msgid "Stay On Top"
-msgstr "Venster bovenop houden"
+msgstr "Permanecer encima"
 
