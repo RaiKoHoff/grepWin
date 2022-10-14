@@ -1,20 +1,24 @@
 ﻿// dllmain.cpp : Defines the entry point for the DLL application.
 #include "pch.h"
+
 #include <wrl/module.h>
 #include <wrl/implements.h>
 #include <wrl/client.h>
 #include <shobjidl_core.h>
 #include <wil\resource.h>
+#include <comutil.h>
 #include <shellapi.h>
+#include <Shlobj.h>
 #include <string>
 #include <vector>
 #include <sstream>
 
 #pragma comment(lib, "Shell32.lib")
+#pragma comment(lib, "comsupp.lib")
 
 using namespace Microsoft::WRL;
 
-HMODULE hDll = nullptr;
+HMODULE       hDll = nullptr;
 
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD   ulReasonForCall,
@@ -42,7 +46,7 @@ constexpr wchar_t DeviceSeparator      = L':';
 // if we want to remove support for "other"separators we can just
 // change this function and force callers to use NormalizeFolderSeparators on
 // filenames first at first point of entry into a program.
-inline bool IsFolderSeparator(wchar_t c)
+inline bool       IsFolderSeparator(wchar_t c)
 {
     return (c == thisOsPathSeparator || c == otherOsPathSeparator);
 }
@@ -131,7 +135,7 @@ public:
     virtual EXPCMDSTATE    State(_In_opt_ IShellItemArray* selection) { return ECS_ENABLED; }
 
     // IExplorerCommand
-    IFACEMETHODIMP GetTitle(_In_opt_ IShellItemArray* items, _Outptr_result_nullonfailure_ PWSTR* name) override
+    IFACEMETHODIMP         GetTitle(_In_opt_ IShellItemArray* items, _Outptr_result_nullonfailure_ PWSTR* name) override
     {
         *name      = nullptr;
         auto title = wil::make_cotaskmem_string_nothrow(Title(items));
@@ -217,10 +221,10 @@ class __declspec(uuid("3C557AFF-6181-4BBC-937D-E2FE8844DD49")) GrepWinExplorerCo
 public:
     const wchar_t* Title(IShellItemArray*) override
     {
-        return L"search with grepWin";
+        return L"Search with grepWin";
     }
 
-    EXPCMDSTATE State(_In_opt_ IShellItemArray* ) override
+    EXPCMDSTATE State(_In_opt_ IShellItemArray*) override
     {
         if (m_site)
         {
@@ -228,9 +232,19 @@ public:
             m_site.As(&oleWindow);
             if (oleWindow)
             {
-                // in Win11, the "main" context menu does not provide an IOleWindow,
-                // so this is for the old context menu, and there we don't show this menu
-                return ECS_HIDDEN;
+                // We don't want to show the menu on the classic context menu.
+                // The classic menu provides an IOleWindow, but the main context
+                // menu of the left treeview in explorer does too.
+                // So we check the window class name: if it's "NamespaceTreeControl",
+                // then we're dealing with the main context menu of the tree view.
+                // If it's not, then we're dealing with the classic context menu
+                // and there we hide this menu entry.
+                HWND hWnd = nullptr;
+                oleWindow->GetWindow(&hWnd);
+                wchar_t szWndClassName[MAX_PATH] = {0};
+                GetClassName(hWnd, szWndClassName, _countof(szWndClassName));
+                if (wcscmp(szWndClassName, L"NamespaceTreeControl"))
+                    return ECS_HIDDEN;
             }
         }
         return ECS_ENABLED;
@@ -277,17 +291,64 @@ public:
                     }
                 }
 
-                path = L"/searchpath:\"" + path + L"\"";
+                path                        = L"/searchpath:\"" + path + L"\"";
 
+                                        // try to launch the exe with the explorer instance:
+                // this avoids that the exe is started with the identity of this dll,
+                // starting it as if it was started the normal way.
+                bool                     execSucceeded = false;
+                ComPtr<IServiceProvider> serviceProvider;
+                if (SUCCEEDED(m_site.As(&serviceProvider)))
+                {
+                    ComPtr<IShellBrowser> shellBrowser;
+                    if (SUCCEEDED(serviceProvider->QueryService(SID_SShellBrowser, IID_IShellBrowser, &shellBrowser)))
+                    {
+                        ComPtr<IShellView> shellView;
+                        if (SUCCEEDED(shellBrowser->QueryActiveShellView(&shellView)))
+                        {
+                            ComPtr<IDispatch> spdispView;
+                            if (SUCCEEDED(shellView->GetItemObject(SVGIO_BACKGROUND, IID_PPV_ARGS(&spdispView))))
+                            {
+                                ComPtr<IShellFolderViewDual> spFolderView;
+                                if (SUCCEEDED(spdispView.As(&spFolderView)))
+                                {
+                                    ComPtr<IDispatch> spdispShell;
+                                    if (SUCCEEDED(spFolderView->get_Application(&spdispShell)))
+                                    {
+                                        ComPtr<IShellDispatch2> spdispShell2;
+                                        if (SUCCEEDED(spdispShell.As(&spdispShell2)))
+                                        {
+                                            // without this, the launched app is not moved to the foreground
+                                            AllowSetForegroundWindow(ASFW_ANY);
 
-                SHELLEXECUTEINFO shExecInfo = {sizeof(SHELLEXECUTEINFO)};
+                                            if (SUCCEEDED(spdispShell2->ShellExecute(_bstr_t{gwPath.c_str()},
+                                                                                     _variant_t{path.c_str()},
+                                                                                     _variant_t{L""},
+                                                                                     _variant_t{L"open"},
+                                                                                     _variant_t{SW_NORMAL})))
+                                            {
+                                                execSucceeded = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
-                shExecInfo.hwnd         = nullptr;
-                shExecInfo.lpVerb       = L"open";
-                shExecInfo.lpFile       = gwPath.c_str();
-                shExecInfo.lpParameters = path.c_str();
-                shExecInfo.nShow        = SW_NORMAL;
-                ShellExecuteEx(&shExecInfo);
+                if (!execSucceeded)
+                {
+                    // just in case the shell execute with explorer failed
+                    SHELLEXECUTEINFO shExecInfo = {sizeof(SHELLEXECUTEINFO)};
+
+                    shExecInfo.hwnd             = nullptr;
+                    shExecInfo.lpVerb           = L"open";
+                    shExecInfo.lpFile           = gwPath.c_str();
+                    shExecInfo.lpParameters     = path.c_str();
+                    shExecInfo.nShow            = SW_NORMAL;
+                    ShellExecuteEx(&shExecInfo);
+                }
             }
 
             return S_OK;
