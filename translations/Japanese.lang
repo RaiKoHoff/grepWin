@@ -33,6 +33,11 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
+#. Resource IDs: (175)
+#, c-format
+msgid "%ld files, skipped %ld files. %ld results selected."
+msgstr "%ld ファイル, 飛ばした %ld ファイル. 結果の%ld項目を選択"
+
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
@@ -62,7 +67,7 @@ msgstr "単語全体(&W)"
 msgid "..."
 msgstr "..."
 
-#. Resource IDs: (1061, 1063, 1064, 1066, 1067)
+#. Resource IDs: (1061, 1063)
 msgid "/"
 msgstr "/"
 
@@ -227,6 +232,11 @@ msgstr "ファイル名が一致(&D):\n「|」で複数の文字列一致パタ�
 msgid "Files"
 msgstr "ファイル"
 
+#. Resource IDs: (174)
+#, c-format
+msgid "Found %ld files, skipped %ld files."
+msgstr "発見 %ld ファイル, 飛ばした %ld ファイル"
+
 #. Resource IDs: (109)
 msgid "GREPWIN"
 msgstr "GREPWIN"
@@ -251,6 +261,10 @@ msgstr "検索場所も保存"
 msgid "Include subfolders"
 msgstr "サブフォルダを含める"
 
+#. Resource IDs: (1092)
+msgid "Include symbolic links"
+msgstr "シンボリックリンクを含める"
+
 #. Resource IDs: (1009)
 msgid "Include system items"
 msgstr "システムファイルを含める"
@@ -266,6 +280,10 @@ msgstr "検索結果を反転 (検索語句ではなく)"
 #. Resource IDs: (1019)
 msgid "KB"
 msgstr "KB"
+
+#. Resource IDs: (1062)
+msgid "Keep file date when replacing"
+msgstr "置換時にファイルの更新日時を維持"
 
 #. Resource IDs: (1075)
 msgid "Language:"
@@ -419,16 +437,16 @@ msgstr "検索文字列"
 #. Resource IDs: (128)
 #, c-format
 msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "検索済み %ldファイル, 省略 %ldファイル. %ldか所の一致 %ld個のファイル中."
+msgstr "検索済み %ldファイル, 飛ばした %ldファイル. 一致%ldか所 %ld個のファイル中."
 
 #. Resource IDs: (173)
 #, c-format
 msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr "検索済み %ldファイル, 省略 %ldファイル. %ldか所の一致 %ld個のファイル中. %ld項目の結果を選択"
+msgstr "検索済み %ldファイル, 飛ばした %ldファイル. 一致%ldか所 %ld個のファイル中. 結果の%ld項目を選択"
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
-msgstr "お好みのエディタを選択..."
+msgstr "エディタを選択..."
 
 #. Resource IDs: (127)
 msgid "Select path to search"
@@ -577,6 +595,10 @@ msgstr "ファイルをバイナリでなくテキストと認識するための
 msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr "このパターンに一致するファイルから検索されます。\r\n区切りに「|」が使えます。\r\n指定例: *.cpp|*.h"
 
+#. Resource IDs: (176)
+msgid "open list with recent entries"
+msgstr "最近検索した項目一覧を開く"
+
 #. Resource IDs: (129)
 msgid "read error"
 msgstr "読み取りエラー"
@@ -609,6 +631,10 @@ msgstr "パスは再帰的に検索されます。\r\nパスを「|」で区切�
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "フォルダを除外できます。CVS と images を除外する例です。\r\n指定例: ^(CVS|images)$\r\n注: Windows では「.svn」フォルダは隠されているため、通常はスキャンされません。"
+
+#. Resource IDs: (1064, 1066, 1067)
+msgid "|"
+msgstr ""
 
 #. Resource IDs: (1024)
 msgid "⑂"

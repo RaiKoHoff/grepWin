@@ -74,6 +74,7 @@ public:
     void  SetMatchesNewline(bool bSet);
     void  SetCreateBackups(bool bSet);
     void  SetCreateBackupsInFolders(bool bSet);
+    void  SetKeepFileDate(bool bSet);
     void  SetWholeWords(bool bSet);
     void  SetUTF8(bool bSet);
     void  SetBinary(bool bSet);
@@ -81,6 +82,7 @@ public:
     void  SetIncludeSystem(bool bSet);
     void  SetIncludeHidden(bool bSet);
     void  SetIncludeSubfolders(bool bSet);
+    void  SetIncludeSymLinks(bool bSet);
     void  SetIncludeBinary(bool bSet);
     void  SetDateLimit(int dateLimit, FILETIME t1, FILETIME t2);
     void  SetNoSaveSettings(bool noSave) { m_bNoSaveSettings = noSave; }
@@ -112,7 +114,7 @@ protected:
     void             SaveWndPosition();
     void             formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool forceShortFmt) const;
     int              CheckRegex();
-    bool             MatchPath(LPCTSTR pathBuf);
+    bool             MatchPath(LPCTSTR pathBuf) const;
     void             AutoSizeAllColumns();
     int              GetSelectedListIndex(int index);
     static bool      FailedShowMessage(HRESULT hr);
@@ -122,22 +124,6 @@ protected:
     bool             CloneWindow();
     std::wstring     ExpandString(const std::wstring& replaceString) const;
 
-private:
-    static bool NameCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool SizeCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool MatchesCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool PathCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool EncodingCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool ModifiedTimeCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool ExtCompareAsc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-
-    static bool NameCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool SizeCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool MatchesCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool PathCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool EncodingCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool ModifiedTimeCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
-    static bool ExtCompareDesc(const CSearchInfo& entry1, const CSearchInfo& entry2);
 
 private:
     HWND                              m_hParent;
@@ -167,12 +153,16 @@ private:
     bool                              m_bIncludeHiddenC;
     bool                              m_bIncludeSubfolders;
     bool                              m_bIncludeSubfoldersC;
+    bool                              m_bIncludeSymLinks;
+    bool                              m_bIncludeSymLinksC;
     bool                              m_bIncludeBinary;
     bool                              m_bIncludeBinaryC;
     bool                              m_bCreateBackup;
     bool                              m_bCreateBackupC;
     bool                              m_bCreateBackupInFolders;
     bool                              m_bCreateBackupInFoldersC;
+    bool                              m_bKeepFileDate;
+    bool                              m_bKeepFileDateC;
     bool                              m_bWholeWords;
     bool                              m_bWholeWordsC;
     bool                              m_bUTF8;
@@ -237,8 +227,10 @@ private:
     CRegStdDWORD                      m_regIncludeSystem;
     CRegStdDWORD                      m_regIncludeHidden;
     CRegStdDWORD                      m_regIncludeSubfolders;
+    CRegStdDWORD                      m_regIncludeSymLinks;
     CRegStdDWORD                      m_regIncludeBinary;
     CRegStdDWORD                      m_regCreateBackup;
+    CRegStdDWORD                      m_regKeepFileDate;
     CRegStdDWORD                      m_regWholeWords;
     CRegStdDWORD                      m_regUTF8;
     CRegStdDWORD                      m_regBinary;

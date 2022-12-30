@@ -33,6 +33,11 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
+#. Resource IDs: (175)
+#, c-format
+msgid "%ld files, skipped %ld files. %ld results selected."
+msgstr "Gefunden %ld Dateien, übersprungen %ld Dateien. %ld Ergebnisse ausgewählt"
+
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
@@ -62,7 +67,7 @@ msgstr "&Ganzes Wort"
 msgid "..."
 msgstr " ... "
 
-#. Resource IDs: (1061, 1063, 1064, 1066, 1067)
+#. Resource IDs: (1061, 1063)
 msgid "/"
 msgstr "/"
 
@@ -227,6 +232,11 @@ msgstr "Datei-Suchmaske:\n'|' zum Trennen mehfacher Suchmasken, zum Ausschließe
 msgid "Files"
 msgstr "Dateien"
 
+#. Resource IDs: (174)
+#, c-format
+msgid "Found %ld files, skipped %ld files."
+msgstr "Gefunden %ld Dateien, übersprungen %ld Dateien."
+
 #. Resource IDs: (109)
 msgid "GREPWIN"
 msgstr "GREPWIN"
@@ -251,6 +261,10 @@ msgstr "Suchpfad mit speichern"
 msgid "Include subfolders"
 msgstr "Unterordner"
 
+#. Resource IDs: (1092)
+msgid "Include symbolic links"
+msgstr "SymLinks"
+
 #. Resource IDs: (1009)
 msgid "Include system items"
 msgstr "System-Dateien"
@@ -266,6 +280,10 @@ msgstr "Umgekehrt suchen (NOT suchtext)"
 #. Resource IDs: (1019)
 msgid "KB"
 msgstr "KB"
+
+#. Resource IDs: (1062)
+msgid "Keep file date when replacing"
+msgstr "Datei-Datum beibehalten"
 
 #. Resource IDs: (1075)
 msgid "Language:"
@@ -577,6 +595,10 @@ msgstr "Anzahl erlaubte NULL Bytes pro MB damit eine Datei als Text statt binär
 msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr "Nur Dateien, die diesem Muster entsprechen, werden gesucht.\r\nVerwenden Sie \"|\" als Trennzeichen.\r\nBeispiel: *.cpp|*.h"
 
+#. Resource IDs: (176)
+msgid "open list with recent entries"
+msgstr "Liste mit letzten Einträgen öffnen"
+
 #. Resource IDs: (129)
 msgid "read error"
 msgstr "Lesefehler"
@@ -609,6 +631,10 @@ msgstr "Der Pfad bzw. die Pfade, der bzw. die rekursiv gesucht wird bzw. werden.
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "Sie können Verzeichnisse ausschließen, z.B. CVS und Images.\r\nBeispiel: ^(CVS|images)$\r\nHinweis´, '.svn'-Ordner sind in Windows 'versteckt', so werden diese üblicherweise nicht gescannt."
+
+#. Resource IDs: (1064, 1066, 1067)
+msgid "|"
+msgstr "|"
 
 #. Resource IDs: (1024)
 msgid "⑂"

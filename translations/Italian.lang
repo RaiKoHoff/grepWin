@@ -33,6 +33,11 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
+#. Resource IDs: (175)
+#, c-format
+msgid "%ld files, skipped %ld files. %ld results selected."
+msgstr "%ld file, saltati %ld file. %ld risultati selezionati."
+
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 #. Resource IDs: (149)
@@ -64,7 +69,7 @@ msgstr "Pa&rola intera"
 msgid "..."
 msgstr "..."
 
-#. Resource IDs: (1061, 1063, 1064, 1066, 1067)
+#. Resource IDs: (1061, 1063)
 msgid "/"
 msgstr "/"
 
@@ -229,6 +234,11 @@ msgstr "Limita Nomi di File:\nusa '|' per separare più modelli di corrispondenz
 msgid "Files"
 msgstr "File"
 
+#. Resource IDs: (174)
+#, c-format
+msgid "Found %ld files, skipped %ld files."
+msgstr "Trovate %ld file, saltati %ld file."
+
 #. Resource IDs: (109)
 msgid "GREPWIN"
 msgstr "GREPWIN"
@@ -253,6 +263,10 @@ msgstr "Includi percorso di ricerca"
 msgid "Include subfolders"
 msgstr "Includi sottocartelle"
 
+#. Resource IDs: (1092)
+msgid "Include symbolic links"
+msgstr ""
+
 #. Resource IDs: (1009)
 msgid "Include system items"
 msgstr "Includi oggetti di sistema"
@@ -268,6 +282,10 @@ msgstr "Ricerca inversa (NON stringa di ricerca)"
 #. Resource IDs: (1019)
 msgid "KB"
 msgstr "KB"
+
+#. Resource IDs: (1062)
+msgid "Keep file date when replacing"
+msgstr ""
 
 #. Resource IDs: (1075)
 msgid "Language:"
@@ -579,6 +597,10 @@ msgstr "numero consentito di byte NULL per MB in un file per essere ancora consi
 msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr "vengono cercati solo i file che corrispondono a questo modello.\nUsa \"|\" come delimitatore.\nEsempio: *.cpp|*.h"
 
+#. Resource IDs: (176)
+msgid "open list with recent entries"
+msgstr ""
+
 #. Resource IDs: (129)
 msgid "read error"
 msgstr "errore di lettura"
@@ -611,6 +633,10 @@ msgstr "il percorso(i) che viene cercato in modo ricorsivo.\nSeparare i percorsi
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "puoi escludere le cartelle, ad es. CVS e immagini.\nEsempio: ^(CVS|immagini)$\nNota, le cartelle '.svn' sono 'nascoste' su Windows, quindi di solito non vengono scansionate."
+
+#. Resource IDs: (1064, 1066, 1067)
+msgid "|"
+msgstr ""
 
 #. Resource IDs: (1024)
 msgid "⑂"
