@@ -3,18 +3,19 @@
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 1900-01-01 00:00+0000\n"
-"PO-Revision-Date: 2022-09-26 15:23+0900\n"
-"Last-Translator: VenusGirl💋 <venusgirl.outlook.com>\n"
-"Language-Team: 비너스걸 <venusgirls.tistory.com>\n"
-"Language: ko\n"
+"PO-Revision-Date: 2022-12-28 19:52+0900\n"
+"Last-Translator: VenusGirl <venusgirl@outlook.com>\n"
+"Language-Team: VenusGirl! <https://venusgirls.tistory.com/>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
 
 # msgid/msgstr fields for Accelerator keys
 # Format is: "ID:xxxxxx:VACS+X" where:
@@ -31,6 +32,11 @@ msgstr ""
 
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
+
+#. Resource IDs: (175)
+#, c-format
+msgid "%ld files, skipped %ld files. %ld results selected."
+msgstr "%ld개 파일, %ld개 파일을 건너뜁니다. %ld개 결과가 선택되었습니다."
 
 #. Resource IDs: (149)
 #, c-format
@@ -61,7 +67,7 @@ msgstr "전체 단어(&W)"
 msgid "..."
 msgstr "..."
 
-#. Resource IDs: (1061, 1063, 1064, 1066, 1067)
+#. Resource IDs: (1061, 1063)
 msgid "/"
 msgstr "/"
 
@@ -99,17 +105,8 @@ msgstr "모든 크기"
 
 #. Resource IDs: (124)
 #, c-format
-msgid ""
-"Are you sure you want to replace\n"
-"%s\n"
-"with\n"
-"%s\n"
-"without creating backups?"
-msgstr ""
-"백업을 생성하지 않고\n"
-"%s\n"
-"을(를)\n"
-"%s로 바꾸시겠습니까?"
+msgid "Are you sure you want to replace\n%s\nwith\n%s\nwithout creating backups?"
+msgstr "백업을 생성하지 않고\n%s\n을(를)\n%s로 바꾸시겠습니까?"
 
 #. Resource IDs: (1081)
 msgid "Between"
@@ -209,7 +206,7 @@ msgstr "정규식 이름 입력:"
 
 #. Resource IDs: (1062)
 msgid "Escape key closes grepWin"
-msgstr "Esc키로 grepWinNP3 닫기"
+msgstr "Esc키로 grepWin 닫기"
 
 #. Resource IDs: (1041)
 msgid "Exclude dirs (Regex):"
@@ -228,16 +225,17 @@ msgid "Ext"
 msgstr "확장자"
 
 #. Resource IDs: (1039)
-msgid ""
-"File Names match:\n"
-"use '|' to separate multiple text match patterns, prepen&d '-' to exclude"
-msgstr ""
-"파일 이름 일치:\n"
-"'|'로 여러 텍스트 패턴을 구분하고, '-'를 앞에 붙여 제외합니다(&D)"
+msgid "File Names match:\nuse '|' to separate multiple text match patterns, prepen&d '-' to exclude"
+msgstr "파일 이름 일치:\n'|'로 여러 텍스트 패턴을 구분하고, '-'를 앞에 붙여 제외합니다(&D)"
 
 #. Resource IDs: (1059)
 msgid "Files"
 msgstr "파일"
+
+#. Resource IDs: (174)
+#, c-format
+msgid "Found %ld files, skipped %ld files."
+msgstr "%ld 파일을 찾았습니다 %ld 파일을 건너뜁니다."
 
 #. Resource IDs: (109)
 msgid "GREPWIN"
@@ -263,13 +261,17 @@ msgstr "검색 경로 포함"
 msgid "Include subfolders"
 msgstr "하위 폴더 포함"
 
+#. Resource IDs: (1092)
+msgid "Include symbolic links"
+msgstr "심볼릭 링크 포함"
+
 #. Resource IDs: (1009)
 msgid "Include system items"
 msgstr "시스템 항목 포함"
 
 #. Resource IDs: (153)
 msgid "Invalid path!"
-msgstr "잘못된 경로입니다!"
+msgstr "잘못된 경로!"
 
 #. Resource IDs: (161)
 msgid "Inverse search (NOT searchstring)"
@@ -278,6 +280,10 @@ msgstr "역방향 검색 (검색 문자열이 아님)"
 #. Resource IDs: (1019)
 msgid "KB"
 msgstr "KB"
+
+#. Resource IDs: (1062)
+msgid "Keep file date when replacing"
+msgstr "교체 시 파일 날짜 유지"
 
 #. Resource IDs: (1075)
 msgid "Language:"
@@ -393,12 +399,8 @@ msgid "Replace string"
 msgstr "문자열 바꾸기"
 
 #. Resource IDs: (1027)
-msgid ""
-"Replace with/\n"
-"Capture format:"
-msgstr ""
-"바꿀 문자열/\n"
-"캡쳐 형식:"
+msgid "Replace with/\nCapture format:"
+msgstr "바꿀 문자열/\n캡쳐 형식:"
 
 #. Resource IDs: (126)
 msgid "S&top"
@@ -501,14 +503,8 @@ msgstr "파일을 바이너리로 취급"
 
 #. Resource IDs: (172)
 #, c-format
-msgid ""
-"You have the option \"%s\" enabled.\r\n"
-"When replacing, this option can lead to corrupted files.\r\n"
-"Do you want to proceed anyway?"
-msgstr ""
-"%s 옵션을 사용하도록 설정했습니다.\n"
-"바꿀 때 이 옵션을 사용하면 파일이 손상될 수 있습니다.\n"
-"그래도 계속 진행하시겠습니까?"
+msgid "You have the option \"%s\" enabled.\r\nWhen replacing, this option can lead to corrupted files.\r\nDo you want to proceed anyway?"
+msgstr "%s 옵션을 사용하도록 설정했습니다.\n바꿀 때 이 옵션을 사용하면 파일이 손상될 수 있습니다.\n그래도 계속 진행하시겠습니까?"
 
 #. Resource IDs: (1025)
 msgid "\\"
@@ -536,11 +532,11 @@ msgstr "어두운 모드에는 Win10 v1803 이상이 필요하며 Windows 시스
 
 #. Resource IDs: (121)
 msgid "equal to"
-msgstr "다음과 같"
+msgstr "다음과 같은"
 
 #. Resource IDs: (122)
 msgid "greater than"
-msgstr "다음보다"
+msgstr "다음보다 큰"
 
 #. Resource IDs: (103, 129)
 msgid "grepWin"
@@ -573,7 +569,7 @@ msgstr "일치하는 줄 텍스트 포함"
 
 #. Resource IDs: (132)
 msgid "invalid regex!"
-msgstr "잘못된 정규식입니다!"
+msgstr "잘못된 정규식!"
 
 #. Resource IDs: (120)
 msgid "less than"
@@ -596,22 +592,20 @@ msgid "number of NULL bytes per MB allowed for a file to still be considered tex
 msgstr "파일이 바이너리 대신 텍스트로 간주되도록 허용되는 MB 당 NULL 바이트 수"
 
 #. Resource IDs: (112)
-msgid ""
-"only files that match this pattern are searched.\r\n"
-"Use \"|\" as the delimiter.\r\n"
-"Example: *.cpp|*.h"
-msgstr ""
-"이 패턴과 일치하는 파일들만 검색됩니다.\n"
-"구분 기호로 '|'를 사용합니다.\n"
-"예제: *.cpp|*.h"
+msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
+msgstr "이 패턴과 일치하는 파일들만 검색됩니다.\n구분 기호로 '|'를 사용합니다.\n예제: *.cpp|*.h"
+
+#. Resource IDs: (176)
+msgid "open list with recent entries"
+msgstr "최근 항목이 있는 열린 목록"
 
 #. Resource IDs: (129)
 msgid "read error"
-msgstr "오류"
+msgstr "읽기 오류"
 
 #. Resource IDs: (131)
 msgid "regex ok"
-msgstr "정규식 정상"
+msgstr "정규식 확인"
 
 #. Resource IDs: (117)
 msgid "reuse grepWin instances."
@@ -631,25 +625,18 @@ msgid "start new grepWin window"
 msgstr "새 grepWinNP 창을 시작합니다"
 
 #. Resource IDs: (114)
-msgid ""
-"the path(s) which is searched recursively.\r\n"
-"Separate paths with the | symbol.\r\n"
-"Example: c:\\temp|d:\\logs"
-msgstr ""
-"재귀적으로 검색되는 경로입니다.\n"
-"'|' 기호로 경로를 구분합니다.\n"
-"예제: c:\\temp|d:\\logs"
+msgid "the path(s) which is searched recursively.\r\nSeparate paths with the | symbol.\r\nExample: c:\\temp|d:\\logs"
+msgstr "재귀적으로 검색되는 경로입니다.\n'|' 기호로 경로를 구분합니다.\n예제: c:\\temp|d:\\logs"
 
 #. Resource IDs: (113)
-msgid ""
-"you can exclude directories, e.g. CVS and images.\r\n"
-"Example: ^(CVS|images)$\r\n"
-"Note, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
+msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
+msgstr "디렉터리를 제외할 수 있고, 예를 들어 CVS 및 이미지입니다.\n예제: ^(CVS|images)$\n참고: '.svn'폴더는 Windows에서 '숨겨져' 있으므로 일반적으로 검색되지 않습니다."
+
+#. Resource IDs: (1064, 1066, 1067)
+msgid "|"
 msgstr ""
-"디렉터리를 제외할 수 있고, 예를 들어 CVS 및 이미지입니다.\n"
-"예제: ^(CVS|images)$\n"
-"참고: '.svn'폴더는 Windows에서 '숨겨져' 있으므로 일반적으로 검색되지 않습니다."
 
 #. Resource IDs: (1024)
 msgid "⑂"
 msgstr "⑂"
+

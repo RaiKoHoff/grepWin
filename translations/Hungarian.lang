@@ -33,6 +33,11 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
+#. Resource IDs: (175)
+#, c-format
+msgid "%ld files, skipped %ld files. %ld results selected."
+msgstr "%ld fájlban, kihagyva %ld fájl. %ld eredmény kiválasztva."
+
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
@@ -62,7 +67,7 @@ msgstr "&Teljes szó"
 msgid "..."
 msgstr "..."
 
-#. Resource IDs: (1061, 1063, 1064, 1066, 1067)
+#. Resource IDs: (1061, 1063)
 msgid "/"
 msgstr "/"
 
@@ -227,6 +232,11 @@ msgstr "Illeszkedő fájlnevek:\nHasználja a '|' jelet a különböző illeszke
 msgid "Files"
 msgstr "Fájlok"
 
+#. Resource IDs: (174)
+#, c-format
+msgid "Found %ld files, skipped %ld files."
+msgstr "Found %ld fájlban, kihagyva %ld fájl."
+
 #. Resource IDs: (109)
 msgid "GREPWIN"
 msgstr "GREPWIN"
@@ -251,6 +261,10 @@ msgstr "Beleértve a keresési útvonalat"
 msgid "Include subfolders"
 msgstr "Alkönyvtárak is"
 
+#. Resource IDs: (1092)
+msgid "Include symbolic links"
+msgstr ""
+
 #. Resource IDs: (1009)
 msgid "Include system items"
 msgstr "Rendszerelemek is"
@@ -266,6 +280,10 @@ msgstr "Fordított keresés (NEM keresési karakterlánc)"
 #. Resource IDs: (1019)
 msgid "KB"
 msgstr "kB"
+
+#. Resource IDs: (1062)
+msgid "Keep file date when replacing"
+msgstr ""
 
 #. Resource IDs: (1075)
 msgid "Language:"
@@ -577,6 +595,10 @@ msgstr "a NULL bájtok MB-onként megengedett száma, hogy egy fájl még mindig
 msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr "csak a mintának megfelelő fájlokat keresi a rendszer.\r\n\"|\" jelet használja elválasztójelként.\r\nPélda: *.cpp|*.h"
 
+#. Resource IDs: (176)
+msgid "open list with recent entries"
+msgstr ""
+
 #. Resource IDs: (129)
 msgid "read error"
 msgstr "olvasási hiba"
@@ -609,6 +631,10 @@ msgstr "a rekurzívan keresett elérési útvonal(ak).\r\nElkülöníti az elér
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "kizárhat könyvtárakat, például a CVS-t és a képeket.\r\Példa: ^(CVS|images)$\r\nMegjegyzés: Az '.svn' mappák Windowson 'rejtett' mappák, ezért általában nem kerülnek átvizsgálásra."
+
+#. Resource IDs: (1064, 1066, 1067)
+msgid "|"
+msgstr ""
 
 #. Resource IDs: (1024)
 msgid "⑂"

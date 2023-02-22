@@ -33,9 +33,6 @@
     <ClCompile Include="grepWin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="InfoDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="NameDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -150,9 +147,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BookmarksDlg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="InfoDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="NameDlg.h">

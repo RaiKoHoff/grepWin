@@ -33,6 +33,11 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
+#. Resource IDs: (175)
+#, c-format
+msgid "%ld files, skipped %ld files. %ld results selected."
+msgstr "%ld filer, hoppade över %ld filer. %ld results selected."
+
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
@@ -62,7 +67,7 @@ msgstr ""
 msgid "..."
 msgstr "..."
 
-#. Resource IDs: (1061, 1063, 1064, 1066, 1067)
+#. Resource IDs: (1061, 1063)
 msgid "/"
 msgstr "/"
 
@@ -227,6 +232,11 @@ msgstr "Filnamn matchar:\nanvänd '|' för att separera multipla textmatchningsm
 msgid "Files"
 msgstr "Filer"
 
+#. Resource IDs: (174)
+#, c-format
+msgid "Found %ld files, skipped %ld files."
+msgstr "Hittade %ld filer, hoppade över %ld filer."
+
 #. Resource IDs: (109)
 msgid "GREPWIN"
 msgstr ""
@@ -251,6 +261,10 @@ msgstr ""
 msgid "Include subfolders"
 msgstr "Inkludera undermappar"
 
+#. Resource IDs: (1092)
+msgid "Include symbolic links"
+msgstr ""
+
 #. Resource IDs: (1009)
 msgid "Include system items"
 msgstr "Inkludera systemfiler"
@@ -266,6 +280,10 @@ msgstr ""
 #. Resource IDs: (1019)
 msgid "KB"
 msgstr "KB"
+
+#. Resource IDs: (1062)
+msgid "Keep file date when replacing"
+msgstr ""
 
 #. Resource IDs: (1075)
 msgid "Language:"
@@ -424,7 +442,7 @@ msgstr "Sök %ld filer, hoppade över %ld filer. Hittade %ld träffar i %ld file
 #. Resource IDs: (173)
 #, c-format
 msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr ""
+msgstr "Sök %ld filer, hoppade över %ld filer. Hittade %ld träffar i %ld filer. %ld results selected."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
@@ -577,6 +595,10 @@ msgstr ""
 msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr "söker bara efter filer som matchar detta mönster.\r\nAnvänd \"|\" som avgränsare.\r\nExempelvis: *.cpp|*.h"
 
+#. Resource IDs: (176)
+msgid "open list with recent entries"
+msgstr ""
+
 #. Resource IDs: (129)
 msgid "read error"
 msgstr "läsfel"
@@ -609,6 +631,10 @@ msgstr "sökväg(arna) söks rekursivt.\r\nSeparera sökvägar med | symbolen.\r
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
 msgstr "du kan exkludera mappar, exempelvis CVS och bilder.\r\nExempelvis: ^(CVS|bilder)$\r\nMärk, '.svn'-mappar are är dolda i Windows, så de är vanligtvis inte sökta i."
+
+#. Resource IDs: (1064, 1066, 1067)
+msgid "|"
+msgstr ""
 
 #. Resource IDs: (1024)
 msgid "⑂"
