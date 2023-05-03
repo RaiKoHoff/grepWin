@@ -156,8 +156,12 @@ msgid "Copy text results to clipboard"
 msgstr "Copia i testi risultanti negli appunti"
 
 #. Resource IDs: (177)
-msgid "Copy whole column"
-msgstr ""
+msgid "Copy column for all items"
+msgstr "Copia la colonna per tutti gli elementi"
+
+#. Resource IDs: (178)
+msgid "Copy column for selected items"
+msgstr "Copia la colonna per gli elementi selezionati"
 
 #. Resource IDs: (1029)
 msgid "Create backup files"
