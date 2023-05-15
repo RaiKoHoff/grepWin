@@ -219,13 +219,27 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
         } while ((hWnd == nullptr) && alreadyRunning && timeout);
     }
 
-    auto moduleName = CPathUtils::GetFileName(CPathUtils::GetModulePath(nullptr));
+    auto modulePath = CPathUtils::GetModuleDir(nullptr);
+
+    auto moduleName = CPathUtils::GetFileName(modulePath);
     bPortable       = ((wcsstr(moduleName.c_str(), L"portable")) || (parser.HasKey(L"portable")));
 
-    g_iniPath       = CPathUtils::GetModuleDir(nullptr);
+    g_iniPath       = modulePath;
     g_iniPath += L"\\grepwin.ini";
     if (parser.HasVal(L"inipath"))
         g_iniPath = parser.GetVal(L"inipath");
+
+    auto origCwd = CPathUtils::GetCWD();
+    // attempt to change the working directory to the installation directory
+    //
+    // This is a helper when launching grepWin using context menus. When
+    // launching from a context menu, the working directory will be set to the
+    // folder grepWin has been invoked from. With the process now having an
+    // association with this directory, actively attempting to manipulate
+    // (e.g. move/delete) will fail due to an "in use" error. To allow users
+    // to freely manipulate their file systems (without having to close
+    // grepWin), change the working directory to the install path of grepWin.
+    _wchdir(modulePath.c_str());
 
     if (bPortable)
     {
@@ -238,7 +252,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
         bool bOnlyOne = !!static_cast<DWORD>(CRegStdDWORD(L"Software\\grepWin\\onlyone", 0));
         if (bPortable)
             bOnlyOne = !!_wtoi(g_iniFile.GetValue(L"global", L"onlyone", L"0"));
-        auto sPath = parser.GetVal(L"searchpath") ? parser.GetVal(L"searchpath") : CPathUtils::GetCWD();
+        auto sPath = parser.GetVal(L"searchpath") ? parser.GetVal(L"searchpath") : origCwd;
         sPath      = SanitizeSearchPaths(sPath);
         SearchReplace(sPath, L"/", L"\\");
         sPath = SanitizeSearchPaths(sPath);
@@ -501,7 +515,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
                 }
                 else
                 {
-                    auto sPath = CPathUtils::GetCWD();
+                    auto sPath = origCwd;
                     sPath      = SanitizeSearchPaths(sPath);
                     searchDlg.SetSearchPath(sPath);
                 }
