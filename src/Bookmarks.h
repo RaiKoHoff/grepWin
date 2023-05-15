@@ -72,8 +72,9 @@ public:
     CBookmarks();
     ~CBookmarks();
 
+    void        InitPath();
     void        Load();
-    void        Save() const;
+    void        Save();
     void        AddBookmark(const Bookmark& bm);
     void        RemoveBookmark(const std::wstring& name);
     Bookmark    GetBookmark(const std::wstring& name) const;

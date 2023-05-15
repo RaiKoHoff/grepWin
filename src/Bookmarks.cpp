@@ -33,7 +33,7 @@ CBookmarks::~CBookmarks()
 {
 }
 
-void CBookmarks::Load()
+void CBookmarks::InitPath()
 {
     auto path = std::make_unique<wchar_t[]>(MAX_PATH_NEW);
     GetModuleFileName(nullptr, path.get(), MAX_PATH_NEW);
@@ -50,30 +50,22 @@ void CBookmarks::Load()
     }
     CreateDirectory(m_iniPath.c_str(), nullptr);
     m_iniPath += L"\\bookmarks";
+}
+
+void CBookmarks::Load()
+{
+    if (m_iniPath.empty())
+        InitPath();
     SetUnicode();
     SetMultiLine();
     SetSpaces(false);
     LoadFile(m_iniPath.c_str());
 }
 
-void CBookmarks::Save() const
+void CBookmarks::Save()
 {
-    auto path = std::make_unique<wchar_t[]>(MAX_PATH_NEW);
-    GetModuleFileName(nullptr, path.get(), MAX_PATH_NEW);
-    if (bPortable)
-    {
-        m_iniPath = path.get();
-        m_iniPath = m_iniPath.substr(0, m_iniPath.rfind('\\'));
-    }
-    else
-    {
-        SHGetFolderPath(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, path.get());
-        m_iniPath = path.get();
-        m_iniPath += L"\\grepWinNP3";
-    }
-    CreateDirectory(m_iniPath.c_str(), nullptr);
-    m_iniPath += L"\\bookmarks";
-
+    if (m_iniPath.empty())
+        InitPath();
     SaveFile(m_iniPath.c_str(), true);
 }
 
