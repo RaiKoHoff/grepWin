@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2023 - Stefan Kueng
+// Copyright (C) 2007-2024 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -52,38 +52,35 @@
 #include "ThreadPool.h"
 #include "UnicodeUtils.h"
 #include "version.h"
+#include "TextOffset.h"
 
 #include <algorithm>
 #include <Commdlg.h>
+#include <format>
 #include <fstream>
 #include <iterator>
-#include <map>
 #include <numeric>
 #include <ranges>
 #include <string>
 
-#pragma warning(push)
-#pragma warning(disable : 4996) // warning STL4010: Various members of std::allocator are deprecated in C++17
 #include <boost/regex.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
-#include <boost/spirit/include/classic_file_iterator.hpp>
-#pragma warning(pop)
+#include <boost/filesystem/path.hpp>
 
 #define GREPWIN_DATEBUFFER 100
 #define LABELUPDATETIMER   10
+#define SEARCHBLOCKSIZE    (1 << 26) // 64MB
 
-constexpr auto          SearchEditSubclassID = 4321;
+DWORD WINAPI     SearchThreadEntry(LPVOID lpParam);
+extern HANDLE    hInitProtection;
+extern ULONGLONG g_startTime;
 
-DWORD WINAPI            SearchThreadEntry(LPVOID lpParam);
+namespace
+{
 
-// ReSharper disable once CppInconsistentNaming
-UINT                    CSearchDlg::m_grepwinStartupmsg = RegisterWindowMessage(L"grepWin_StartupMessage");
-std::map<size_t, DWORD> linePositions;
+constexpr auto SearchEditSubclassID = 4321;
 
-extern ULONGLONG        g_startTime;
-extern HANDLE           hInitProtection;
-
-void                    drawRedEditBox(HWND hWnd, WPARAM wParam)
+void           drawRedEditBox(HWND hWnd, WPARAM wParam)
 {
     // make the border of the edit control red in case
     // the regex is invalid
@@ -92,12 +89,32 @@ void                    drawRedEditBox(HWND hWnd, WPARAM wParam)
         hdc = GetDC(hWnd);
     else
         hdc = GetDCEx(hWnd, reinterpret_cast<HRGN>(wParam), DCX_WINDOW | DCX_INTERSECTRGN);
-    RECT rc = {0};
+    RECT rc = {};
     GetWindowRect(hWnd, &rc);
     MapWindowPoints(nullptr, hWnd, reinterpret_cast<LPPOINT>(&rc), 2);
-    ::SetBkColor(hdc, RGB(255, 0, 0));
+    ::SetBkColor(hdc, RGB(236, 93, 93));
     ::ExtTextOut(hdc, 0, 0, ETO_OPAQUE, &rc, nullptr, 0, nullptr);
     ReleaseDC(hWnd, hdc);
+}
+
+LRESULT CALLBACK SearchPathWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR /*uIdSubclass*/, DWORD_PTR dwRefData)
+{
+    switch (uMsg)
+    {
+        case WM_NCPAINT:
+        {
+            auto searchDlg = reinterpret_cast<CSearchDlg*>(dwRefData);
+            if (!searchDlg->isSearchPathValid())
+            {
+                drawRedEditBox(hWnd, wParam);
+                return 0;
+            }
+        }
+        default:
+            break;
+    }
+
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
 LRESULT CALLBACK SearchEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR /*uIdSubclass*/, DWORD_PTR dwRefData)
@@ -107,7 +124,7 @@ LRESULT CALLBACK SearchEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
         case WM_NCPAINT:
         {
             auto searchDlg = reinterpret_cast<CSearchDlg*>(dwRefData);
-            if (!searchDlg->isRegexValid())
+            if (!searchDlg->isSearchValid())
             {
                 drawRedEditBox(hWnd, wParam);
                 return 0;
@@ -160,6 +177,98 @@ LRESULT CALLBACK FileNameMatchEditWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
+void escapeForRegexEx(std::wstring& str, int type)
+{
+    const wchar_t* specialChar[17] = {
+        // oringinal
+        L"\\",
+        // regex special chars, current and future
+        L"^", L"$", L".", L"?", L"*", L"+", L"[", L"]", L"(", L")", L"{", L"}", L"|",
+        // command line special chars
+        L"\"", L" ", L"\t"};
+    const wchar_t* specialEscaped[17] = {
+        L"\\x5c",
+        L"\\^", L"\\$", L"\\.", L"\\?", L"\\*", L"\\+", L"\\[", L"\\]", L"\\(", L"\\)", L"\\{", L"\\}", L"\\|",
+        L"\\x22", L"\\x20", L"\\x09"};
+    int count;
+    switch (type)
+    {
+        case 1: // one line string as process argv
+            count = _countof(specialChar);
+            break;
+        default: // regex safe as text
+            count = 14;
+            break;
+    }
+    for (int i = 0; i < count; ++i)
+    {
+        SearchReplace(str, specialChar[i], specialEscaped[i]);
+    }
+}
+
+void escapeForReplaceText(std::wstring& str)
+{
+    const wchar_t* specialChar[6]    = {L"\\", L"$", L"(", L")", L"?", L","};
+    const wchar_t* specialEscaped[6] = {L"\\x5c", L"\\$", L"\\(", L"\\)", L"\\?", L"\\,"};
+    for (int i = 0; i < _countof(specialChar); ++i)
+    {
+        SearchReplace(str, specialChar[i], specialEscaped[i]);
+    }
+}
+
+void removeGrepWinExtVariables(std::wstring& str)
+{
+    for (const auto& s : {L"${filepath}", L"${filename}", L"${fileext}"})
+    {
+        SearchReplace(str, s, L"");
+    }
+}
+
+void replaceGrepWinFilePathVariables(std::wstring& str, const std::wstring& filePath)
+{
+    // those variables are for regex mode only
+    std::wstring fullPath = filePath;
+    escapeForRegexEx(fullPath, 0);
+
+    std::wstring fileNameFull = fullPath.substr(fullPath.rfind(L"\\x5c") + 4);
+    std::wstring filename;
+    std::wstring fileExt;
+    auto         dotPos = fileNameFull.find_last_of(L'.');
+    if (dotPos != std::string::npos)
+    {
+        filename = fileNameFull.substr(0, dotPos - 1);
+        if (fileNameFull.size() > dotPos)
+        {
+            fileExt = fileNameFull.substr(dotPos + 1);
+        }
+    }
+    else
+    {
+        filename = fileNameFull;
+    }
+    SearchReplace(str, L"${filepath}", fullPath);
+    SearchReplace(str, L"${filename}", filename);
+    SearchReplace(str, L"${fileext}", fileExt);
+}
+
+bool isRegexValid(const std::wstring& searchString)
+{
+    bool bValid = true;
+    try
+    {
+        boost::wregex expression = boost::wregex(searchString);
+    }
+    catch (const std::exception&)
+    {
+        bValid = false;
+    }
+    return bValid;
+}
+} // namespace
+
+// ReSharper disable once CppInconsistentNaming
+UINT CSearchDlg::m_grepwinStartupmsg = RegisterWindowMessage(L"grepWin_StartupMessage");
+
 CSearchDlg::CSearchDlg(HWND hParent)
     : m_hParent(hParent)
     , m_dwThreadRunning(FALSE)
@@ -206,8 +315,8 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_executeImmediately(ExecuteAction::None)
     , m_dateLimit(0)
     , m_bDateLimitC(false)
-    , m_date1({0})
-    , m_date2({0})
+    , m_date1({})
+    , m_date2({})
     , m_bNoSaveSettings(false)
     , m_bReplace(false)
     , m_bConfirmationOnReplace(true)
@@ -218,9 +327,12 @@ CSearchDlg::CSearchDlg(HWND hParent)
     , m_totalMatches(0)
     , m_selectedItems(0)
     , m_bAscending(true)
-    , m_isRegexValid(true)
-    , m_isExcludeDirsRegexValid(true)
-    , m_isFileNameMatchingRegexValid(true)
+    , m_hasSearchDir(false)
+    , m_bSearchPathValid(false)
+    , m_searchValidLength(0)
+    , m_replaceValidLength(0)
+    , m_bExcludeDirsRegexValid(true)
+    , m_bFileNameMatchingRegexValid(true)
     , m_themeCallbackId(0)
     , m_pDropTarget(nullptr)
     , m_autoCompleteFilePatterns(bPortable ? &g_iniFile : nullptr)
@@ -265,23 +377,35 @@ CSearchDlg::CSearchDlg(HWND hParent)
 
 CSearchDlg::~CSearchDlg()
 {
-    if (m_pDropTarget)
-        delete m_pDropTarget;
 }
 
-bool CSearchDlg::isRegexValid() const
+bool CSearchDlg::isSearchPathValid() const
 {
-    return m_isRegexValid;
+    return m_bSearchPathValid;
+}
+
+bool CSearchDlg::isSearchValid() const
+{
+    // 0 is allowed to count files
+    return m_searchValidLength >= 0;
 }
 
 bool CSearchDlg::isExcludeDirsRegexValid() const
 {
-    return m_isExcludeDirsRegexValid;
+    return m_bExcludeDirsRegexValid;
 }
 
 bool CSearchDlg::isFileNameMatchRegexValid() const
 {
-    return m_isFileNameMatchingRegexValid;
+    return m_bFileNameMatchingRegexValid;
+}
+
+void CSearchDlg::SetSearchModeUI(bool isTextMode)
+{
+    DialogEnableWindow(IDC_WHOLEWORDS, isTextMode);
+    DialogEnableWindow(IDC_TESTREGEX, !isTextMode);
+    DialogEnableWindow(IDC_EDITMULTILINE1, isTextMode);
+    DialogEnableWindow(IDC_EDITMULTILINE2, isTextMode);
 }
 
 LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -349,63 +473,19 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             AddToolTip(IDC_PATTERNMRU, TranslatedString(hResource, IDS_OPEN_MRU).c_str());
             AddToolTip(IDC_REPLACETEXT, LPSTR_TEXTCALLBACK);
 
+            SetWindowSubclass(GetDlgItem(*this, IDC_SEARCHPATH), SearchPathWndProc, SearchEditSubclassID, reinterpret_cast<DWORD_PTR>(this));
             SetWindowSubclass(GetDlgItem(*this, IDC_SEARCHTEXT), SearchEditWndProc, SearchEditSubclassID, reinterpret_cast<DWORD_PTR>(this));
             SetWindowSubclass(GetDlgItem(*this, IDC_EXCLUDEDIRSPATTERN), ExcludeDirEditWndProc, SearchEditSubclassID, reinterpret_cast<DWORD_PTR>(this));
             SetWindowSubclass(GetDlgItem(*this, IDC_PATTERN), FileNameMatchEditWndProc, SearchEditSubclassID, reinterpret_cast<DWORD_PTR>(this));
 
-            if (m_searchPath.empty())
-            {
-                if (bPortable)
-                    m_searchPath = g_iniFile.GetValue(L"global", L"searchpath", L"");
-                else
-                    m_searchPath = std::wstring(m_regSearchPath);
-            }
-            else
-            {
-                // expand a possible 'short' path
-                DWORD ret = 0;
-                ret       = ::GetLongPathName(m_searchPath.c_str(), nullptr, 0);
-                if (ret)
-                {
-                    auto pathBuf = std::make_unique<wchar_t[]>(ret + 2LL);
-                    ret          = ::GetLongPathName(m_searchPath.c_str(), pathBuf.get(), ret + 1);
-                    m_searchPath = std::wstring(pathBuf.get(), ret);
-                }
-            }
-
-            if (m_patternRegex.empty() && !m_patternRegexC)
-            {
-                if (bPortable)
-                {
-                    m_patternRegex      = g_iniFile.GetValue(L"global", L"pattern", L"");
-                    m_bUseRegexForPaths = !!_wtoi(g_iniFile.GetValue(L"global", L"UseFileMatchRegex", L""));
-                }
-                else
-                {
-                    m_patternRegex      = std::wstring(m_regPattern);
-                    m_bUseRegexForPaths = !!static_cast<DWORD>(m_regUseRegexForPaths);
-                }
-            }
-            if (m_excludeDirsPatternRegex.empty() && !m_excludeDirsPatternRegexC)
-            {
-                if (bPortable)
-                    m_excludeDirsPatternRegex = g_iniFile.GetValue(L"global", L"ExcludeDirsPattern", L"");
-                else
-                    m_excludeDirsPatternRegex = std::wstring(m_regExcludeDirsPattern);
-            }
             // initialize the controls
-            SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchPath.c_str());
-            SetDlgItemText(hwndDlg, IDC_SEARCHTEXT, m_searchString.c_str());
-            SetDlgItemText(hwndDlg, IDC_EXCLUDEDIRSPATTERN, m_excludeDirsPatternRegex.c_str());
-            SetDlgItemText(hwndDlg, IDC_PATTERN, m_patternRegex.c_str());
-            SetDlgItemText(hwndDlg, IDC_REPLACETEXT, m_replaceString.c_str());
 
             // the path edit control should work as a drop target for files and folders
             HWND hSearchPath = GetDlgItem(hwndDlg, IDC_SEARCHPATH);
-            m_pDropTarget    = new CFileDropTarget(hSearchPath);
-            RegisterDragDrop(hSearchPath, m_pDropTarget);
+            m_pDropTarget    = std::make_unique<CFileDropTarget>(hSearchPath);
+            RegisterDragDrop(hSearchPath, m_pDropTarget.get());
             // create the supported formats:
-            FORMATETC ftEtc = {0};
+            FORMATETC ftEtc = {};
             ftEtc.cfFormat  = CF_TEXT;
             ftEtc.dwAspect  = DVASPECT_CONTENT;
             ftEtc.lindex    = -1;
@@ -440,7 +520,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 }
             }
 
-            wchar_t buf[MAX_PATH] = {0};
+            wchar_t buf[MAX_PATH] = {};
             if (m_bSizeC && (m_lSize != static_cast<uint64_t>(-1)))
             {
                 swprintf_s(buf, _countof(buf), L"%I64u", m_lSize);
@@ -525,15 +605,12 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
             CheckRadioButton(hwndDlg, IDC_REGEXRADIO, IDC_TEXTRADIO, (bPortable ? _wtoi(g_iniFile.GetValue(L"global", L"UseRegex", L"0")) : static_cast<DWORD>(m_regUseRegex)) ? IDC_REGEXRADIO : IDC_TEXTRADIO);
             CheckRadioButton(hwndDlg, IDC_ALLSIZERADIO, IDC_SIZERADIO, m_bAllSize ? IDC_ALLSIZERADIO : IDC_SIZERADIO);
-            CheckRadioButton(hwndDlg, IDC_FILEPATTERNREGEX, IDC_FILEPATTERNTEXT, m_bUseRegexForPaths ? IDC_FILEPATTERNREGEX : IDC_FILEPATTERNTEXT);
             SendDlgItemMessage(hwndDlg, IDC_WHOLEWORDS, BM_SETCHECK, m_bWholeWords ? BST_CHECKED : BST_UNCHECKED, 0);
-            DialogEnableWindow(IDC_WHOLEWORDS, IsDlgButtonChecked(hwndDlg, IDC_TEXTRADIO));
             if (!m_searchString.empty() || m_bUseRegexC)
                 CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
 
-            DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
-            DialogEnableWindow(IDC_ADDTOBOOKMARKS, FALSE);
-            DialogEnableWindow(IDC_EXCLUDEDIRSPATTERN, !!m_bIncludeSubfolders);
+            bool isTextMode = IsDlgButtonChecked(*this, IDC_TEXTRADIO);
+            SetSearchModeUI(isTextMode);
 
             ::SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_SEARCH).c_str());
             if (!m_showContentSet)
@@ -560,11 +637,57 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             ShowWindow(GetDlgItem(*this, IDC_DATEPICK2), (m_dateLimit == IDC_RADIO_DATE_BETWEEN - IDC_RADIO_DATE_ALL) ? SW_SHOW : SW_HIDE);
             ShowWindow(GetDlgItem(*this, IDC_DATEPICK1), (m_dateLimit != 0) ? SW_SHOW : SW_HIDE);
 
+            // Set search path at last to trigger testing properties of others that it controls
+            if (m_patternRegex.empty() && !m_patternRegexC)
+            {
+                if (bPortable)
+                {
+                    m_patternRegex      = g_iniFile.GetValue(L"global", L"pattern", L"");
+                    m_bUseRegexForPaths = !!_wtoi(g_iniFile.GetValue(L"global", L"UseFileMatchRegex", L""));
+                }
+                else
+                {
+                    m_patternRegex      = std::wstring(m_regPattern);
+                    m_bUseRegexForPaths = !!static_cast<DWORD>(m_regUseRegexForPaths);
+                }
+            }
+            if (m_excludeDirsPatternRegex.empty() && !m_excludeDirsPatternRegexC)
+            {
+                if (bPortable)
+                    m_excludeDirsPatternRegex = g_iniFile.GetValue(L"global", L"ExcludeDirsPattern", L"");
+                else
+                    m_excludeDirsPatternRegex = std::wstring(m_regExcludeDirsPattern);
+            }
+            if (m_searchPath.empty())
+            {
+                if (bPortable)
+                    m_searchPath = g_iniFile.GetValue(L"global", L"searchpath", L"");
+                else
+                    m_searchPath = std::wstring(m_regSearchPath);
+            }
+            else
+            {
+                // expand a possible 'short' path
+                DWORD ret = 0;
+                ret       = ::GetLongPathName(m_searchPath.c_str(), nullptr, 0);
+                if (ret)
+                {
+                    auto pathBuf = std::make_unique<wchar_t[]>(ret + 2LL);
+                    ret          = ::GetLongPathName(m_searchPath.c_str(), pathBuf.get(), ret + 1);
+                    m_searchPath = std::wstring(pathBuf.get(), ret);
+                }
+            }
+            SetDlgItemText(hwndDlg, IDC_PATTERN, m_patternRegex.c_str());
+            SetDlgItemText(hwndDlg, IDC_EXCLUDEDIRSPATTERN, m_excludeDirsPatternRegex.c_str());
+            CheckRadioButton(hwndDlg, IDC_FILEPATTERNREGEX, IDC_FILEPATTERNTEXT, m_bUseRegexForPaths ? IDC_FILEPATTERNREGEX : IDC_FILEPATTERNTEXT);
+            SetDlgItemText(hwndDlg, IDC_SEARCHTEXT, m_searchString.c_str());
+            SetDlgItemText(hwndDlg, IDC_SEARCHPATH, m_searchPath.c_str());
+            // trigger setting replace button state
+            SetDlgItemText(hwndDlg, IDC_REPLACETEXT, m_replaceString.c_str());
+
             SetFocus(GetDlgItem(hwndDlg, IDC_SEARCHTEXT));
 
-            AdjustControlSize(IDC_BINARY);
             AdjustControlSize(IDC_UTF8);
-
             AdjustControlSize(IDC_REGEXRADIO);
             AdjustControlSize(IDC_TEXTRADIO);
             AdjustControlSize(IDC_WHOLEWORDS);
@@ -616,7 +739,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_resizer.AddControl(hwndDlg, IDC_CREATEBACKUP, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_KEEPFILEDATECHECK, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_UTF8, RESIZER_TOPLEFT);
-            m_resizer.AddControl(hwndDlg, IDC_BINARY, RESIZER_TOPLEFTRIGHT);
+            m_resizer.AddControl(hwndDlg, IDC_BINARY, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_TESTREGEX, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_ADDTOBOOKMARKS, RESIZER_TOPLEFT);
             m_resizer.AddControl(hwndDlg, IDC_BOOKMARKS, RESIZER_TOPLEFT);
@@ -663,7 +786,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
             InitDialog(hwndDlg, IDI_GREPWIN);
 
-            WINDOWPLACEMENT wpl       = {0};
+            WINDOWPLACEMENT wpl       = {};
             DWORD           size      = sizeof(wpl);
             std::wstring    winPosKey = L"windowpos_" + GetMonitorSetupHash();
             if (bPortable)
@@ -741,6 +864,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 if (!m_bNoSaveSettings)
                 {
                     m_autoCompleteFilePatterns.Save();
+                    m_autoCompleteExcludeDirsPatterns.Save();
                     m_autoCompleteSearchPatterns.Save();
                     m_autoCompleteReplacePatterns.Save();
                     m_autoCompleteSearchPaths.Save();
@@ -772,8 +896,13 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             switch (wParam)
             {
                 case IDC_RESULTLIST:
-                    DoListNotify(reinterpret_cast<LPNMITEMACTIVATE>(lParam));
-                    break;
+                {
+                    if (reinterpret_cast<LPNMHDR>(lParam)->code == NM_CUSTOMDRAW && !m_bCaptureSearch)
+                    {
+                        return ColorizeMatchResultProc(reinterpret_cast<LPNMLVCUSTOMDRAW>(lParam));
+                    }
+                    return DoListNotify(reinterpret_cast<LPNMITEMACTIVATE>(lParam));
+                }
                 case IDOK:
                     switch (reinterpret_cast<LPNMHDR>(lParam)->code)
                     {
@@ -793,16 +922,17 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                             if (pDropDown->hdr.hwndFrom == GetDlgItem(*this, IDOK))
                             {
                                 auto buf    = GetDlgItemText(IDC_SEARCHPATH);
-                                bool bIsDir = !!PathIsDirectory(buf.get());
-                                if ((!bIsDir) && wcschr(buf.get(), '|'))
+                                bool bIsDir = PathIsDirectory(buf.get());
+                                if ((!bIsDir) && wcschr(buf.get(), L'|'))
                                     bIsDir = true; // assume directories in case of multiple paths
+                                m_bUseRegex              = (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED);
 
                                 auto sInverseSearch      = TranslatedString(hResource, IDS_INVERSESEARCH);
                                 auto sSearchInFoundFiles = TranslatedString(hResource, IDS_SEARCHINFOUNDFILES);
                                 auto sCaptureSearch      = TranslatedString(hResource, IDS_CAPTURESEARCH);
                                 AppendMenu(hSplitMenu, bIsDir ? MF_STRING : MF_STRING | MF_DISABLED, IDC_INVERSESEARCH, sInverseSearch.c_str());
                                 AppendMenu(hSplitMenu, m_items.empty() ? MF_STRING | MF_DISABLED : MF_STRING, IDC_SEARCHINFOUNDFILES, sSearchInFoundFiles.c_str());
-                                AppendMenu(hSplitMenu, GetDlgItemTextLength(IDC_REPLACETEXT) ? MF_STRING : MF_STRING | MF_DISABLED, IDC_CAPTURESEARCH, sCaptureSearch.c_str());
+                                AppendMenu(hSplitMenu, m_bUseRegex && GetDlgItemTextLength(IDC_REPLACETEXT) ? MF_STRING : MF_STRING | MF_DISABLED, IDC_CAPTURESEARCH, sCaptureSearch.c_str());
                             }
                             // Display the menu.
                             TrackPopupMenu(hSplitMenu, TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, 0, *this, nullptr);
@@ -889,7 +1019,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             m_selectedItems = 0;
             UpdateInfoLabel();
             // reset the sort indicator
-            HDITEM hd         = {0};
+            HDITEM hd         = {};
             hd.mask           = HDI_FORMAT;
             HWND hListControl = GetDlgItem(*this, IDC_RESULTLIST);
             HWND hHeader      = ListView_GetHeader(hListControl);
@@ -908,7 +1038,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         {
             auto searchInfo = reinterpret_cast<CSearchInfo*>(lParam);
             m_totalMatches += static_cast<int>(searchInfo->matchCount);
-            if ((wParam != 0) || (m_searchString.empty()) || searchInfo->readError || !searchInfo->exception.empty() || m_bNotSearch)
+            if ((wParam != 0) || m_searchString.empty() || searchInfo->readError || !searchInfo->exception.empty() || m_bNotSearch)
             {
                 AddFoundEntry(searchInfo);
             }
@@ -927,6 +1057,7 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             AutoSizeAllColumns();
             UpdateInfoLabel();
             ::SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_SEARCH).c_str());
+            AddToolTip(IDOK, TranslatedString(hResource, IDS_SHIFT_NOTSEARCH).c_str());
             DialogEnableWindow(IDC_RESULTFILES, true);
             DialogEnableWindow(IDC_RESULTCONTENT, true);
             ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_HIDE);
@@ -1090,7 +1221,8 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 SetDlgItemText(*this, IDC_SEARCHTEXT, m_searchString.c_str());
                 SetDlgItemText(*this, IDC_REPLACETEXT, m_replaceString.c_str());
                 CheckRadioButton(*this, IDC_REGEXRADIO, IDC_TEXTRADIO, m_bUseRegex ? IDC_REGEXRADIO : IDC_TEXTRADIO);
-                DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
+                bool isTextMode = IsDlgButtonChecked(*this, IDC_TEXTRADIO);
+                SetSearchModeUI(isTextMode);
 
                 SendDlgItemMessage(*this, IDC_INCLUDESUBFOLDERS, BM_SETCHECK, m_bIncludeSubfolders ? BST_CHECKED : BST_UNCHECKED, 0);
                 SendDlgItemMessage(*this, IDC_INCLUDESYMLINK, BM_SETCHECK, m_bIncludeSymLinks ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -1108,8 +1240,6 @@ LRESULT CSearchDlg::DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 CheckRadioButton(*this, IDC_FILEPATTERNREGEX, IDC_FILEPATTERNTEXT, m_bUseRegexForPaths ? IDC_FILEPATTERNREGEX : IDC_FILEPATTERNTEXT);
                 SetDlgItemText(*this, IDC_EXCLUDEDIRSPATTERN, m_excludeDirsPatternRegex.c_str());
                 SetDlgItemText(*this, IDC_PATTERN, m_patternRegex.c_str());
-                DialogEnableWindow(IDC_WHOLEWORDS, IsDlgButtonChecked(hwndDlg, IDC_TEXTRADIO));
-                CheckRegex();
             }
         }
         break;
@@ -1141,6 +1271,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
 
                 CStringUtils::rtrim(m_searchPath, L"\\/");
                 SearchReplace(m_searchPath, L"/", L"\\");
+                SearchReplace(m_searchPath, L"\\|", L"|");
 
                 if (PathIsRelative(m_searchPath.c_str()))
                 {
@@ -1177,7 +1308,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 ShowWindow(GetDlgItem(*this, IDC_EXPORT), SW_HIDE);
                 m_items.clear();
                 m_listItems.clear();
-                m_listItems.reserve(500000);
                 m_backupAndTempFiles.clear();
 
                 HWND hListControl = GetDlgItem(*this, IDC_RESULTLIST);
@@ -1194,6 +1324,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 if (!m_bNoSaveSettings)
                 {
                     m_autoCompleteFilePatterns.Save();
+                    m_autoCompleteExcludeDirsPatterns.Save();
                     m_autoCompleteSearchPatterns.Save();
                     m_autoCompleteReplacePatterns.Save();
                     m_autoCompleteSearchPaths.Save();
@@ -1239,6 +1370,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                 if (m_bReplace)
                 {
                     m_replaceString = ExpandString(m_replaceString);
+                    m_bNotSearch    = false;
                 }
 
                 if (m_searchString.empty() || m_bNotSearch)
@@ -1248,10 +1380,18 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     m_showContent = false;
                     InitResultList();
                 }
+                else if (!m_replaceString.empty() && id == IDC_CAPTURESEARCH)
+                {
+                    // switch to content view
+                    CheckRadioButton(*this, IDC_RESULTFILES, IDC_RESULTCONTENT, IDC_RESULTCONTENT);
+                    m_showContent = true;
+                    InitResultList();
+                }
 
                 m_dwThreadRunning = true;
                 m_cancelled       = false;
                 SetDlgItemText(*this, IDOK, TranslatedString(hResource, IDS_STOP).c_str());
+                AddToolTip(IDOK, L"");
                 ShowWindow(GetDlgItem(*this, IDC_PROGRESS), SW_SHOW);
                 SendDlgItemMessage(*this, IDC_PROGRESS, PBM_SETMARQUEE, 1, 0);
                 if (m_pTaskbarList)
@@ -1294,6 +1434,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     if (!m_bNoSaveSettings)
                     {
                         m_autoCompleteFilePatterns.Save();
+                        m_autoCompleteExcludeDirsPatterns.Save();
                         m_autoCompleteSearchPatterns.Save();
                         m_autoCompleteReplacePatterns.Save();
                         m_autoCompleteSearchPaths.Save();
@@ -1394,63 +1535,154 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
             }
         }
         break;
+        // validation_group { // initialize them in bottom up order for this control
         case IDC_SEARCHPATH:
         {
             if (msg == EN_CHANGE)
             {
                 if (m_autoCompleteSearchPaths.GetOptions() & ACO_NOPREFIXFILTERING)
                     m_autoCompleteSearchPaths.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
-                int  len    = GetDlgItemTextLength(IDC_SEARCHTEXT);
-                auto buf    = GetDlgItemText(IDC_SEARCHPATH);
-                bool bIsDir = !!PathIsDirectory(buf.get());
-                if ((!bIsDir) && wcschr(buf.get(), '|'))
-                    bIsDir = true; // assume directories in case of multiple paths
-                bool bIncludeSubfolders = (IsDlgButtonChecked(*this, IDC_INCLUDESUBFOLDERS) == BST_CHECKED);
-                DialogEnableWindow(IDC_ALLSIZERADIO, bIsDir);
-                DialogEnableWindow(IDC_SIZERADIO, bIsDir);
-                DialogEnableWindow(IDC_SIZECOMBO, bIsDir);
-                DialogEnableWindow(IDC_SIZEEDIT, bIsDir);
-                DialogEnableWindow(IDC_INCLUDESYSTEM, bIsDir);
-                DialogEnableWindow(IDC_INCLUDEHIDDEN, bIsDir);
-                DialogEnableWindow(IDC_INCLUDESUBFOLDERS, bIsDir);
-                DialogEnableWindow(IDC_INCLUDESYMLINK, bIsDir);
-                DialogEnableWindow(IDC_INCLUDEBINARY, bIsDir && len > 0);
-                DialogEnableWindow(IDC_PATTERN, bIsDir);
-                DialogEnableWindow(IDC_EXCLUDEDIRSPATTERN, bIsDir || bIncludeSubfolders);
-                DialogEnableWindow(IDC_FILEPATTERNREGEX, bIsDir);
-                DialogEnableWindow(IDC_FILEPATTERNTEXT, bIsDir);
+                auto     buf  = GetDlgItemText(IDC_SEARCHPATH);
+                wchar_t* path = buf.get();
+                wchar_t* p    = wcschr(path, L'|');
+                if (p != nullptr)
+                {
+                    *p = L'\x00';
+                }
+                // dir
+                bool bValid    = PathIsDirectory(path);
+                m_hasSearchDir = bValid; // only the 1st of multiple
+                DialogEnableWindow(IDC_ALLSIZERADIO, bValid);
+                DialogEnableWindow(IDC_SIZERADIO, bValid);
+                DialogEnableWindow(IDC_SIZECOMBO, bValid);
+                DialogEnableWindow(IDC_SIZEEDIT, bValid);
+                //
+                DialogEnableWindow(IDC_INCLUDESYSTEM, bValid);
+                DialogEnableWindow(IDC_INCLUDEHIDDEN, bValid);
+                DialogEnableWindow(IDC_INCLUDESUBFOLDERS, bValid);
+                DialogEnableWindow(IDC_INCLUDEBINARY, bValid);
+                DialogEnableWindow(IDC_INCLUDESYMLINK, bValid);
+                //
+                DialogEnableWindow(IDC_RADIO_DATE_ALL, bValid);
+                DialogEnableWindow(IDC_RADIO_DATE_NEWER, bValid);
+                DialogEnableWindow(IDC_RADIO_DATE_OLDER, bValid);
+                DialogEnableWindow(IDC_RADIO_DATE_BETWEEN, bValid);
+                //
+                bool bIncludeSubfolders = bValid && (IsDlgButtonChecked(*this, IDC_INCLUDESUBFOLDERS) == BST_CHECKED);
+                DialogEnableWindow(IDC_EXCLUDEDIRSPATTERN, bIncludeSubfolders);
+                DialogEnableWindow(IDC_EXCLUDEDIRMRU, bIncludeSubfolders);
+                DialogEnableWindow(IDC_PATTERN, bValid);
+                DialogEnableWindow(IDC_PATTERNMRU, bValid);
+                //
+                DialogEnableWindow(IDC_FILEPATTERNREGEX, bValid);
+                DialogEnableWindow(IDC_FILEPATTERNTEXT, bValid);
+                if (!bValid)
+                {
+                    // or file
+                    bValid = PathFileExists(path);
+                }
+                m_bSearchPathValid = bValid;
+                RedrawWindow(GetDlgItem(*this, IDC_SEARCHPATH), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
 
                 // change the dialog title to "grepWin : search/path"
-                wchar_t compactPath[100] = {0};
-                PathCompactPathEx(compactPath, buf.get(), 40, 0);
-                wchar_t titleBuf[MAX_PATH] = {0};
+                wchar_t compactPath[100] = {};
+                PathCompactPathEx(compactPath, path, 40, 0);
+                wchar_t titleBuf[MAX_PATH] = {};
                 swprintf_s(titleBuf, _countof(titleBuf), L"grepWin : %s", compactPath);
                 SetWindowText(*this, titleBuf);
             }
         }
+        case IDC_REGEXRADIO:
+        case IDC_TEXTRADIO:
+        {
+            if (id != IDC_SEARCHPATH)
+            {
+                bool isTextMode = IsDlgButtonChecked(*this, IDC_TEXTRADIO);
+                SetSearchModeUI(isTextMode);
+            }
+        }
+        case IDC_SEARCHTEXT:
+        {
+            if (id == IDC_REGEXRADIO || id == IDC_TEXTRADIO || (msg == EN_CHANGE && id == IDC_SEARCHTEXT))
+            {
+                if (m_autoCompleteSearchPatterns.GetOptions() & ACO_NOPREFIXFILTERING)
+                    m_autoCompleteSearchPatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
+                std::wstring search = GetDlgItemText(IDC_SEARCHTEXT).get();
+                m_searchValidLength = static_cast<int>(search.length());
+                if (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED)
+                {
+                    removeGrepWinExtVariables(search);
+                    if (m_searchValidLength > 0 && !isRegexValid(search))
+                    {
+                        m_searchValidLength = -1;
+                    }
+                }
+                DialogEnableWindow(IDC_ADDTOBOOKMARKS, m_searchValidLength > 0);
+                RedrawWindow(GetDlgItem(*this, IDC_SEARCHTEXT), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
+            }
+        }
+        case IDC_REPLACETEXT:
+        {
+            if (id == IDC_REGEXRADIO || id == IDC_TEXTRADIO || (msg == EN_CHANGE && id == IDC_REPLACETEXT))
+            {
+                if (m_autoCompleteReplacePatterns.GetOptions() & ACO_NOPREFIXFILTERING)
+                    m_autoCompleteReplacePatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
+                std::wstring replace = GetDlgItemText(IDC_REPLACETEXT).get();
+                m_replaceValidLength = static_cast<int>(replace.length());
+            }
+        }
+        case IDC_FILEPATTERNREGEX:
+        case IDC_FILEPATTERNTEXT:
+        case IDC_PATTERN:
+        {
+            if (id == IDC_FILEPATTERNREGEX || id == IDC_FILEPATTERNTEXT || (msg == EN_CHANGE && id == IDC_PATTERN))
+            {
+                if (m_autoCompleteFilePatterns.GetOptions() & ACO_NOPREFIXFILTERING)
+                    m_autoCompleteFilePatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
+                if (IsDlgButtonChecked(*this, IDC_FILEPATTERNREGEX) == BST_CHECKED)
+                {
+                    auto     buf                  = GetDlgItemText(IDC_PATTERN);
+                    wchar_t* str                  = buf.get();
+                    m_bFileNameMatchingRegexValid = (wcslen(str) == 0 || isRegexValid(str));
+                }
+                else
+                {
+                    m_bFileNameMatchingRegexValid = TRUE;
+                }
+                RedrawWindow(GetDlgItem(*this, IDC_PATTERN), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
+            }
+
+            // all grouped conditions
+            bool bValid = m_bSearchPathValid;
+            if (bValid && m_hasSearchDir)
+            {
+                bValid = m_bExcludeDirsRegexValid && m_bFileNameMatchingRegexValid;
+            }
+            DialogEnableWindow(IDOK, bValid && (m_searchValidLength >= 0));
+            DialogEnableWindow(IDC_REPLACE, bValid && (m_searchValidLength > 0));
+        }
         break;
+        // } validation_group
         case IDC_INCLUDESUBFOLDERS:
         {
             if (msg == BN_CLICKED)
             {
-                auto buf                = GetDlgItemText(IDC_SEARCHPATH);
                 bool bIncludeSubfolders = (IsDlgButtonChecked(*this, IDC_INCLUDESUBFOLDERS) == BST_CHECKED);
-                bool bIsDir             = !!PathIsDirectory(buf.get());
-                if ((!bIsDir) && wcschr(buf.get(), '|'))
-                    bIsDir = true; // assume directories in case of multiple paths
-                DialogEnableWindow(IDC_EXCLUDEDIRSPATTERN, bIsDir || bIncludeSubfolders);
+                DialogEnableWindow(IDC_EXCLUDEDIRSPATTERN, bIncludeSubfolders);
+                DialogEnableWindow(IDC_EXCLUDEDIRMRU, bIncludeSubfolders);
             }
         }
         break;
-        case IDC_SEARCHTEXT:
+        case IDC_EXCLUDEDIRSPATTERN:
         {
             if (msg == EN_CHANGE)
             {
-                if (m_autoCompleteSearchPatterns.GetOptions() & ACO_NOPREFIXFILTERING)
-                    m_autoCompleteSearchPatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
-                int len = CheckRegex();
-                DialogEnableWindow(IDC_ADDTOBOOKMARKS, len > 0);
-                DialogEnableWindow(IDC_INCLUDEBINARY, len > 0);
+                if (m_autoCompleteExcludeDirsPatterns.GetOptions() & ACO_NOPREFIXFILTERING)
+                    m_autoCompleteExcludeDirsPatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
+                auto     buf             = GetDlgItemText(IDC_EXCLUDEDIRSPATTERN);
+                wchar_t* str             = buf.get();
+                m_bExcludeDirsRegexValid = (wcslen(str) == 0 || isRegexValid(str));
+                RedrawWindow(GetDlgItem(*this, IDC_EXCLUDEDIRSPATTERN), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
             }
         }
         break;
@@ -1458,7 +1690,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         {
             if (msg == EN_CHANGE)
             {
-                wchar_t buf[20] = {0};
+                wchar_t buf[20] = {};
                 ::GetDlgItemText(*this, IDC_SIZEEDIT, buf, _countof(buf));
                 if (wcslen(buf))
                 {
@@ -1475,16 +1707,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                     }
                 }
             }
-        }
-        break;
-        case IDC_REGEXRADIO:
-        case IDC_TEXTRADIO:
-        case IDC_FILEPATTERNREGEX:
-        case IDC_FILEPATTERNTEXT:
-        {
-            CheckRegex();
-            DialogEnableWindow(IDC_TESTREGEX, !IsDlgButtonChecked(*this, IDC_TEXTRADIO));
-            DialogEnableWindow(IDC_WHOLEWORDS, IsDlgButtonChecked(*this, IDC_TEXTRADIO));
         }
         break;
         case IDC_ADDTOBOOKMARKS:
@@ -1555,44 +1777,15 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
         case IDC_EDITMULTILINE1:
         case IDC_EDITMULTILINE2:
         {
-            int          uID      = (id == IDC_EDITMULTILINE1 ? IDC_SEARCHTEXT : IDC_REPLACETEXT);
-            auto         buf      = GetDlgItemText(static_cast<int>(uID));
-            std::wstring ctrlText = buf.get();
-
-            // replace all \r\n strings with real CRLFs
-            try
-            {
-                int                    ft         = boost::regex::normal;
-                boost::wregex          expression = (id == IDC_EDITMULTILINE1
-                                                         ? boost::wregex(L"\\(\\?:\\\\n\\|\\\\r\\\\n\\|\\\\n\\\\r\\)", ft)
-                                                         : boost::wregex(L"\\\\r\\\\n", ft));
-                boost::match_flag_type rFlags     = boost::match_default | boost::format_all;
-                ctrlText                          = regex_replace(ctrlText, expression, L"\\r\\n", rFlags);
-            }
-            catch (const std::exception&)
-            {
-            }
+            int               uID      = (id == IDC_EDITMULTILINE1 ? IDC_SEARCHTEXT : IDC_REPLACETEXT);
+            auto              buf      = GetDlgItemText(static_cast<int>(uID));
+            std::wstring      ctrlText = buf.get();
             CMultiLineEditDlg editDlg(*this);
             editDlg.SetString(ctrlText);
 
             if (editDlg.DoModal(hResource, IDD_MULTILINEEDIT, *this) == IDOK)
             {
                 std::wstring text = editDlg.GetSearchString();
-                // replace all CRLFs with \r\n strings (literal)
-                try
-                {
-                    int                    ft         = boost::regex::normal;
-                    boost::wregex          expression = boost::wregex(L"\\r\\n", ft);
-                    boost::match_flag_type rFlags     = boost::match_default | boost::format_all;
-                    if (id == IDC_EDITMULTILINE1)
-                        text = regex_replace(text, expression, L"\\(\\?:\\\\n|\\\\r\\\\n|\\\\n\\\\r\\)", rFlags);
-                    else
-                        text = regex_replace(text, expression, L"\\\\r\\\\n", rFlags);
-                }
-                catch (const std::exception&)
-                {
-                }
-
                 SetDlgItemText(*this, static_cast<int>(uID), text.c_str());
             }
             ::SetFocus(GetDlgItem(*this, uID));
@@ -1617,35 +1810,6 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
             m_autoCompleteFilePatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST | ACO_NOPREFIXFILTERING);
             ::SetFocus(GetDlgItem(*this, IDC_PATTERN));
             SendDlgItemMessage(*this, IDC_PATTERN, WM_KEYDOWN, VK_DOWN, 0);
-        }
-        break;
-        case IDC_PATTERN:
-        {
-            if (msg == EN_CHANGE)
-            {
-                if (m_autoCompleteFilePatterns.GetOptions() & ACO_NOPREFIXFILTERING)
-                    m_autoCompleteFilePatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
-                CheckRegex();
-            }
-        }
-        break;
-        case IDC_EXCLUDEDIRSPATTERN:
-        {
-            if (msg == EN_CHANGE)
-            {
-                if (m_autoCompleteExcludeDirsPatterns.GetOptions() & ACO_NOPREFIXFILTERING)
-                    m_autoCompleteExcludeDirsPatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
-                CheckRegex();
-            }
-        }
-        break;
-        case IDC_REPLACETEXT:
-        {
-            if (msg == EN_CHANGE)
-            {
-                if (m_autoCompleteReplacePatterns.GetOptions() & ACO_NOPREFIXFILTERING)
-                    m_autoCompleteReplacePatterns.SetOptions(ACO_UPDOWNKEYDROPSLIST | ACO_AUTOSUGGEST);
-            }
         }
         break;
         case IDC_EXPORT:
@@ -1766,7 +1930,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                                 {
                                     if (needSeparator)
                                         file << separator;
-                                    auto line = item.matchLines[i];
+                                    auto line = item.matchLinesMap.at(item.matchLinesNumbers[i]);
                                     CStringUtils::rtrim(line, L"\r\n");
                                     file << CUnicodeUtils::StdGetUTF8(line);
                                 }
@@ -1795,7 +1959,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
                         exportLineNumbers      = includeMatchLineNumbers ? 1 : 0;
                         exportLineContent      = includeMatchLineTexts ? 1 : 0;
                     }
-                    SHELLEXECUTEINFO sei = {0};
+                    SHELLEXECUTEINFO sei = {};
                     sei.cbSize           = sizeof(SHELLEXECUTEINFO);
                     sei.lpVerb           = TEXT("open");
                     sei.lpFile           = path.c_str();
@@ -1825,7 +1989,7 @@ LRESULT CSearchDlg::DoCommand(int id, int msg)
 
 void CSearchDlg::SaveWndPosition()
 {
-    WINDOWPLACEMENT wpl = {0};
+    WINDOWPLACEMENT wpl = {};
     wpl.length          = sizeof(WINDOWPLACEMENT);
     GetWindowPlacement(*this, &wpl);
     std::wstring winPosKey = L"windowpos_" + GetMonitorSetupHash();
@@ -1847,24 +2011,34 @@ void CSearchDlg::SaveWndPosition()
 void CSearchDlg::UpdateInfoLabel()
 {
     std::wstring sText;
-    wchar_t      buf[1024] = {0};
+    wchar_t      buf[1024] = {};
     if (m_searchString.empty())
     {
         if (m_selectedItems)
             swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABELSELEMPTY).c_str(),
-                       m_items.size(), m_totalItems - m_searchedItems, m_selectedItems);
+                       std::format(L"{:L}", m_items.size()).c_str(),
+                       std::format(L"{:L}", m_totalItems - m_searchedItems).c_str(),
+                       std::format(L"{:L}", m_selectedItems).c_str());
         else
             swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABELEMPTY).c_str(),
-                       m_items.size(), m_totalItems - m_searchedItems);
+                       std::format(L"{:L}", m_items.size()).c_str(),
+                       std::format(L"{:L}", m_totalItems - m_searchedItems).c_str());
     }
     else
     {
         if (m_selectedItems)
             swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABELSEL).c_str(),
-                       m_searchedItems, m_totalItems - m_searchedItems, m_totalMatches, m_items.size(), m_selectedItems);
+                       std::format(L"{:L}", m_searchedItems).c_str(),
+                       std::format(L"{:L}", m_totalItems - m_searchedItems).c_str(),
+                       std::format(L"{:L}", m_totalMatches).c_str(),
+                       std::format(L"{:L}", m_items.size()).c_str(),
+                       std::format(L"{:L}", m_selectedItems).c_str());
         else
             swprintf_s(buf, _countof(buf), TranslatedString(hResource, IDS_INFOLABEL).c_str(),
-                       m_searchedItems, m_totalItems - m_searchedItems, m_totalMatches, m_items.size());
+                       std::format(L"{:L}", m_searchedItems).c_str(),
+                       std::format(L"{:L}", m_totalItems - m_searchedItems).c_str(),
+                       std::format(L"{:L}", m_totalMatches).c_str(),
+                       std::format(L"{:L}", m_items.size()).c_str());
     }
     sText = buf;
 
@@ -1888,6 +2062,7 @@ bool CSearchDlg::InitResultList()
     std::wstring sName         = TranslatedString(hResource, IDS_NAME);
     std::wstring sSize         = TranslatedString(hResource, IDS_SIZE);
     std::wstring sLine         = TranslatedString(hResource, IDS_LINE);
+    std::wstring sMove         = TranslatedString(hResource, IDS_COLUMN);
     std::wstring sMatches      = TranslatedString(hResource, IDS_MATCHES);
     std::wstring sText         = TranslatedString(hResource, IDS_TEXT);
     std::wstring sPath         = TranslatedString(hResource, IDS_PATH);
@@ -1895,28 +2070,39 @@ bool CSearchDlg::InitResultList()
     std::wstring sDateModified = TranslatedString(hResource, IDS_DATEMODIFIED);
     std::wstring sExtension    = TranslatedString(hResource, IDS_FILEEXT);
 
-    LVCOLUMN     lvc           = {0};
+    LVCOLUMN     lvc           = {};
     lvc.mask                   = LVCF_TEXT | LVCF_FMT;
     lvc.fmt                    = LVCFMT_LEFT;
     lvc.cx                     = -1;
     lvc.pszText                = const_cast<LPWSTR>(static_cast<LPCWSTR>(sName.c_str()));
     ListView_InsertColumn(hListControl, 0, &lvc);
-    lvc.pszText = filelist ? const_cast<LPWSTR>(static_cast<LPCWSTR>(sSize.c_str())) : const_cast<LPWSTR>(static_cast<LPCWSTR>(sLine.c_str()));
-    lvc.fmt     = filelist ? LVCFMT_RIGHT : LVCFMT_LEFT;
-    ListView_InsertColumn(hListControl, 1, &lvc);
-    lvc.fmt     = LVCFMT_LEFT;
-    lvc.pszText = filelist ? const_cast<LPWSTR>(static_cast<LPCWSTR>(sMatches.c_str())) : const_cast<LPWSTR>(static_cast<LPCWSTR>(sText.c_str()));
-    ListView_InsertColumn(hListControl, 2, &lvc);
-    lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sPath.c_str()));
-    ListView_InsertColumn(hListControl, 3, &lvc);
     if (filelist)
     {
+        lvc.fmt     = LVCFMT_RIGHT;
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sSize.c_str()));
+        ListView_InsertColumn(hListControl, 1, &lvc);
+        lvc.fmt     = LVCFMT_LEFT;
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sMatches.c_str()));
+        ListView_InsertColumn(hListControl, 2, &lvc);
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sPath.c_str()));
+        ListView_InsertColumn(hListControl, 3, &lvc);
         lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sExtension.c_str()));
         ListView_InsertColumn(hListControl, 4, &lvc);
         lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sEncoding.c_str()));
         ListView_InsertColumn(hListControl, 5, &lvc);
         lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sDateModified.c_str()));
         ListView_InsertColumn(hListControl, 6, &lvc);
+    }
+    else
+    {
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sLine.c_str()));
+        ListView_InsertColumn(hListControl, 1, &lvc);
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sMove.c_str()));
+        ListView_InsertColumn(hListControl, 2, &lvc);
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sText.c_str()));
+        ListView_InsertColumn(hListControl, 3, &lvc);
+        lvc.pszText = const_cast<LPWSTR>(static_cast<LPCWSTR>(sPath.c_str()));
+        ListView_InsertColumn(hListControl, 4, &lvc);
     }
 
     ListView_SetColumnWidth(hListControl, 0, 300);
@@ -1934,7 +2120,7 @@ bool CSearchDlg::InitResultList()
     return true;
 }
 
-bool CSearchDlg::AddFoundEntry(CSearchInfo* pInfo, bool bOnlyListControl)
+bool CSearchDlg::AddFoundEntry(const CSearchInfo* pInfo, bool bOnlyListControl)
 {
     if (!bOnlyListControl)
     {
@@ -2117,19 +2303,22 @@ void CSearchDlg::ShowContextMenu(HWND hWnd, int x, int y)
                                 case 1: // line number
                                     copyText += std::to_wstring(pInfo->matchLinesNumbers[subIndex]);
                                     break;
-                                case 2: // line
+                                case 2: // column number
+                                    copyText += std::to_wstring(pInfo->matchColumnsNumbers[subIndex]);
+                                    break;
+                                case 3: // line
                                 {
                                     std::wstring line;
-                                    if (pInfo->matchLines.size() > static_cast<size_t>(subIndex))
+                                    if (pInfo->matchLinesMap.contains(pInfo->matchLinesNumbers[subIndex]))
                                     {
-                                        line = pInfo->matchLines[subIndex];
+                                        line = pInfo->matchLinesMap.at(pInfo->matchLinesNumbers[subIndex]);
                                         std::ranges::replace(line, '\n', ' ');
                                         std::ranges::replace(line, '\r', ' ');
                                     }
                                     copyText += line;
                                 }
                                 break;
-                                case 3: // path
+                                case 4: // path
                                     copyText += pInfo->filePath.substr(0, pInfo->filePath.size() - pInfo->filePath.substr(pInfo->filePath.find_last_of('\\') + 1).size() - 1);
                                     break;
                             }
@@ -2164,10 +2353,13 @@ void CSearchDlg::ShowContextMenu(HWND hWnd, int x, int y)
             auto     subIdx = std::get<1>(tup);
             data.path       = info.filePath;
             LineDataLine dataLine;
-            if (info.matchLinesNumbers.size() > subIdx)
+            if (static_cast<int>(info.matchLinesNumbers.size()) > subIdx)
+            {
                 dataLine.number = info.matchLinesNumbers[subIdx];
-            if (info.matchLines.size() > subIdx)
-                dataLine.text = info.matchLines[subIdx];
+                dataLine.column = info.matchColumnsNumbers[subIdx];
+            }
+            if (info.matchLinesMap.contains(info.matchLinesNumbers[subIdx]))
+                dataLine.text = info.matchLinesMap.at(info.matchLinesNumbers[subIdx]);
             data.lines.push_back(dataLine);
             lines.push_back(data);
         }
@@ -2177,11 +2369,12 @@ void CSearchDlg::ShowContextMenu(HWND hWnd, int x, int y)
         return;
 
     std::vector<CSearchInfo> vPaths;
+    vPaths.reserve(pathMap.size());
     for (const auto& idx : pathMap | std::views::keys)
     {
         vPaths.push_back(m_items[idx]);
     }
-    shellMenu.SetObjects(vPaths, lines);
+    shellMenu.SetObjects(std::move(vPaths), std::move(lines));
 
     if ((x == -1) && (y == -1))
     {
@@ -2206,7 +2399,21 @@ bool CSearchDlg::PreTranslateMessage(MSG* pMsg)
         {
             case VK_RETURN:
             {
-                if (GetFocus() == hListControl)
+                if (bCtrl && bShift)
+                {
+                    // replace
+                    DoCommand(IDC_REPLACE, 0);
+                }
+                else if (bShift)
+                {
+                    DoCommand(IDC_INVERSESEARCH, 0);
+                }
+                else if (bCtrl)
+                {
+                    // search in found files
+                    DoCommand(IDC_SEARCHINFOUNDFILES, 0);
+                }
+                else if (GetFocus() == hListControl)
                 {
                     int iItem = -1;
                     while ((iItem = ListView_GetNextItem(hListControl, iItem, LVNI_SELECTED)) != (-1))
@@ -2242,37 +2449,58 @@ bool CSearchDlg::PreTranslateMessage(MSG* pMsg)
             break;
             case 'C':
             {
-                if ((GetFocus() == hListControl) && bCtrl && !bShift && !bAlt)
+                if ((GetFocus() == hListControl) && bCtrl)
                 {
                     // copy all selected entries to the clipboard
                     std::wstring clipBoardText;
-                    HWND         hHeader       = ListView_GetHeader(hListControl);
-                    int          columns       = Header_GetItemCount(hHeader);
-                    WCHAR        buf[MAX_PATH] = {0};
-                    for (int i = 0; i < columns; ++i)
+                    if (bShift) // Ctrl+Shift+C : copy text of all columns
                     {
-                        HD_ITEM hdi    = {0};
-                        hdi.mask       = HDI_TEXT;
-                        hdi.pszText    = buf;
-                        hdi.cchTextMax = _countof(buf);
-                        Header_GetItem(hHeader, i, &hdi);
-                        if (i > 0)
-                            clipBoardText += L"\t";
-                        clipBoardText += hdi.pszText;
-                    }
-                    clipBoardText += L"\r\n";
-
-                    int iItem = -1;
-                    while ((iItem = ListView_GetNextItem(hListControl, iItem, LVNI_SELECTED)) != (-1))
-                    {
+                        HWND  hHeader       = ListView_GetHeader(hListControl);
+                        int   columns       = Header_GetItemCount(hHeader);
+                        WCHAR buf[MAX_PATH] = {};
                         for (int i = 0; i < columns; ++i)
                         {
-                            ListView_GetItemText(hListControl, iItem, i, buf, _countof(buf));
+                            HD_ITEM hdi    = {};
+                            hdi.mask       = HDI_TEXT;
+                            hdi.pszText    = buf;
+                            hdi.cchTextMax = _countof(buf);
+                            Header_GetItem(hHeader, i, &hdi);
                             if (i > 0)
                                 clipBoardText += L"\t";
-                            clipBoardText += buf;
+                            clipBoardText += hdi.pszText;
                         }
                         clipBoardText += L"\r\n";
+
+                        int iItem = -1;
+                        while ((iItem = ListView_GetNextItem(hListControl, iItem, LVNI_SELECTED)) != (-1))
+                        {
+                            for (int i = 0; i < columns; ++i)
+                            {
+                                ListView_GetItemText(hListControl, iItem, i, buf, _countof(buf));
+                                if (i > 0)
+                                    clipBoardText += L"\t";
+                                clipBoardText += buf;
+                            }
+                            clipBoardText += L"\r\n";
+                        }
+                    }
+                    else
+                    {
+                        // Ctrl+C : copy file paths
+                        // Ctrol+Alt+C : copy file names
+                        int  iItem    = -1;
+                        bool fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
+                        while ((iItem = ListView_GetNextItem(hListControl, iItem, LVNI_SELECTED)) != (-1))
+                        {
+                            int selIndex = GetSelectedListIndex(fileList, iItem);
+                            if ((selIndex < 0) || (selIndex >= static_cast<int>(m_items.size())))
+                                continue;
+                            auto path = m_items[GetSelectedListIndex(fileList, iItem)].filePath;
+                            if (bAlt)
+                                path = path.substr(path.find_last_of('\\') + 1);
+                            clipBoardText += path;
+                            clipBoardText += L"\r\n";
+                        }
                     }
                     WriteAsciiStringToClipboard(clipBoardText.c_str(), *this);
                 }
@@ -2281,6 +2509,7 @@ bool CSearchDlg::PreTranslateMessage(MSG* pMsg)
             case VK_DELETE:
             {
                 m_autoCompleteFilePatterns.RemoveSelected();
+                m_autoCompleteExcludeDirsPatterns.RemoveSelected();
                 m_autoCompleteSearchPatterns.RemoveSelected();
                 m_autoCompleteReplacePatterns.RemoveSelected();
                 m_autoCompleteSearchPaths.RemoveSelected();
@@ -2328,7 +2557,112 @@ bool CSearchDlg::PreTranslateMessage(MSG* pMsg)
     return false;
 }
 
-void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
+LRESULT CSearchDlg::ColorizeMatchResultProc(LPNMLVCUSTOMDRAW lpLVCD)
+{
+    switch (lpLVCD->nmcd.dwDrawStage)
+    {
+        case CDDS_PREPAINT: // theme hooks this stage
+            return CDRF_NOTIFYITEMDRAW;
+        case CDDS_ITEMPREPAINT:
+            return CDRF_NOTIFYSUBITEMDRAW;
+        case CDDS_ITEMPREPAINT | CDDS_SUBITEM:
+            return CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT;
+        case CDDS_ITEMPOSTPAINT | CDDS_SUBITEM: // use the theme color
+        {
+            if (lpLVCD->iSubItem == 3 && IsDlgButtonChecked(*this, IDC_RESULTFILES) != BST_CHECKED)
+            {
+                HDC  hdc = lpLVCD->nmcd.hdc;
+                RECT rc  = lpLVCD->nmcd.rc; // lpLVCD->rcText does not work
+                if (rc.top == 0)
+                {
+                    // hover on items
+                    break;
+                }
+
+                int iRow               = static_cast<int>(lpLVCD->nmcd.dwItemSpec);
+                auto [index, subIndex] = m_listItems[iRow];
+                CSearchInfo* pInfo     = &m_items[index];
+                if (pInfo->encoding == CTextFile::Binary)
+                {
+                    break;
+                }
+
+                if (!pInfo->matchLinesMap.contains(pInfo->matchLinesNumbers[subIndex]))
+                {
+                    // don't have those details for large files
+                    break;
+                }
+                int   lenText           = static_cast<int>(pInfo->matchLinesMap[pInfo->matchLinesNumbers[subIndex]].length());
+
+                auto  colMatch          = pInfo->matchColumnsNumbers[subIndex] - 1;
+                WCHAR textBuf[MAX_PATH] = {};
+                if (colMatch + pInfo->matchLengths[subIndex] >= MAX_PATH)
+                {
+                    // LV_ITEM: Allows any length string to be stored as item text, only the first 259 TCHARs are displayed.
+                    // 259, I counted it, not 260.
+                    break;
+                }
+
+                HWND   hListControl = GetDlgItem(*this, IDC_RESULTLIST);
+                LVITEM lv           = {};
+                lv.iItem            = iRow;
+                lv.iSubItem         = 3;
+                lv.mask             = LVIF_TEXT;
+                lv.pszText          = textBuf;
+                if (lenText + 1 > _countof(textBuf))
+                {
+                    lv.cchTextMax = _countof(textBuf);
+                }
+                else
+                {
+                    lv.cchTextMax = lenText + 1;
+                }
+                if (ListView_GetItem(hListControl, &lv))
+                {
+                    LPWSTR pMatch   = lv.pszText + colMatch;
+                    SIZE   textSize = {0, 0};
+
+                    rc.left += 6;
+                    rc.right -= 6;
+
+                    // Not precise sometimes.
+                    // We keep the text and draw a transparent rectangle only. So, will not break the text.
+                    GetTextExtentPoint32(hdc, lv.pszText, colMatch, &textSize);
+                    rc.left += textSize.cx;
+                    if (rc.left >= rc.right)
+                    {
+                        break;
+                    }
+                    GetTextExtentPoint32(hdc, pMatch, pInfo->matchLengths[subIndex], &textSize);
+                    if (rc.right > rc.left + textSize.cx)
+                    {
+                        rc.right = rc.left + textSize.cx;
+                    }
+
+                    LONG          width   = rc.right - rc.left;
+                    LONG          height  = rc.bottom - rc.top;
+                    HDC           hcdc    = CreateCompatibleDC(hdc);
+                    BITMAPINFO    bmi     = {{sizeof(BITMAPINFOHEADER), width, height, 1, 32, BI_RGB, static_cast<DWORD>(width * height * 4u), 0, 0, 0, 0}, {{0, 0, 0, 0}}};
+                    BLENDFUNCTION blend   = {AC_SRC_OVER, 0, 92, 0}; // 36%
+                    HBITMAP       hBitmap = CreateDIBSection(hcdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0x0);
+                    RECT          rc2     = {0, 0, width, height};
+                    auto          oldBmp  = SelectObject(hcdc, hBitmap);
+                    FillRect(hcdc, &rc2, CreateSolidBrush(RGB(255, 255, 0)));
+                    AlphaBlend(hdc, rc.left, rc.top, width, height, hcdc, 0, 0, width, height, blend);
+                    SelectObject(hcdc, oldBmp);
+                    DeleteObject(hBitmap);
+                    DeleteDC(hcdc);
+                }
+            }
+        }
+        default:
+            break;
+    }
+
+    return CDRF_DODEFAULT;
+}
+
+LRESULT CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
 {
     if (lpNMItemActivate->hdr.code == NM_DBLCLK)
     {
@@ -2337,7 +2671,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
             OpenFileAtListIndex(lpNMItemActivate->iItem);
         }
     }
-    if (lpNMItemActivate->hdr.code == LVN_ODSTATECHANGED)
+    else if (lpNMItemActivate->hdr.code == LVN_ODSTATECHANGED)
     {
         if (!m_bBlockUpdate)
         {
@@ -2346,7 +2680,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
             UpdateInfoLabel();
         }
     }
-    if (lpNMItemActivate->hdr.code == LVN_ITEMCHANGED)
+    else if (lpNMItemActivate->hdr.code == LVN_ITEMCHANGED)
     {
         if ((lpNMItemActivate->uOldState & LVIS_SELECTED) || (lpNMItemActivate->uNewState & LVIS_SELECTED))
         {
@@ -2358,14 +2692,15 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
             }
         }
     }
-    if (lpNMItemActivate->hdr.code == LVN_BEGINDRAG)
+    else if (lpNMItemActivate->hdr.code == LVN_BEGINDRAG)
     {
         CDropFiles dropFiles; // class for creating DROPFILES struct
 
         HWND       hListControl = GetDlgItem(*this, IDC_RESULTLIST);
         int        nCount       = ListView_GetItemCount(hListControl);
         if (nCount == 0)
-            return;
+            return 0L;
+        ;
 
         int  iItem    = -1;
         bool fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
@@ -2379,7 +2714,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
             dropFiles.CreateStructure(hListControl);
         }
     }
-    if (lpNMItemActivate->hdr.code == LVN_COLUMNCLICK)
+    else if (lpNMItemActivate->hdr.code == LVN_COLUMNCLICK)
     {
         bool fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
         m_bAscending  = !m_bAscending;
@@ -2414,17 +2749,30 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                 }
                 break;
             case 3:
-                if (m_bAscending)
-                    std::ranges::sort(m_items, CSearchInfo::PathCompareAsc);
-                else
-                    std::ranges::sort(m_items, CSearchInfo::PathCompareDesc);
-                bDidSort = true;
+                if (fileList)
+                {
+                    if (m_bAscending)
+                        std::ranges::sort(m_items, CSearchInfo::PathCompareAsc);
+                    else
+                        std::ranges::sort(m_items, CSearchInfo::PathCompareDesc);
+                    bDidSort = true;
+                }
                 break;
             case 4:
-                if (m_bAscending)
-                    std::ranges::sort(m_items, CSearchInfo::ExtCompareAsc);
+                if (fileList)
+                {
+                    if (m_bAscending)
+                        std::ranges::sort(m_items, CSearchInfo::ExtCompareAsc);
+                    else
+                        std::ranges::sort(m_items, CSearchInfo::ExtCompareDesc);
+                }
                 else
-                    std::ranges::sort(m_items, CSearchInfo::ExtCompareDesc);
+                {
+                    if (m_bAscending)
+                        std::ranges::sort(m_items, CSearchInfo::PathCompareAsc);
+                    else
+                        std::ranges::sort(m_items, CSearchInfo::PathCompareDesc);
+                }
                 bDidSort = true;
                 break;
             case 5:
@@ -2446,9 +2794,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
         }
         if (bDidSort)
         {
-            auto size = m_listItems.size();
             m_listItems.clear();
-            m_listItems.reserve(size);
 
             int index = 0;
             for (const auto& item : m_items)
@@ -2469,7 +2815,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
         ListView_SetItemCountEx(hListControl, fileList ? m_items.size() : m_listItems.size(), LVSICF_NOINVALIDATEALL | LVSICF_NOSCROLL);
 
         AutoSizeAllColumns();
-        HDITEM hd    = {0};
+        HDITEM hd    = {};
         hd.mask      = HDI_FORMAT;
         HWND hHeader = ListView_GetHeader(hListControl);
         int  iCount  = Header_GetItemCount(hHeader);
@@ -2488,41 +2834,62 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
         SendMessage(hListControl, WM_SETREDRAW, TRUE, 0);
         RedrawWindow(hListControl, nullptr, nullptr, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
     }
-    if (lpNMItemActivate->hdr.code == LVN_GETINFOTIP)
+    else if (lpNMItemActivate->hdr.code == LVN_GETINFOTIP)
     {
-        NMLVGETINFOTIP* pInfoTip = reinterpret_cast<NMLVGETINFOTIP*>(lpNMItemActivate);
+        bool            fileList  = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
+        NMLVGETINFOTIP* pInfoTip  = reinterpret_cast<NMLVGETINFOTIP*>(lpNMItemActivate);
+        size_t          listIndex = pInfoTip->iItem;
+        CSearchInfo*    pInfo;
+        int             subIndex = 0;
 
-        // Which item number?
-        size_t          itemId   = pInfoTip->iItem;
-        int             iItem    = GetSelectedListIndex(static_cast<int>(itemId));
-        pInfoTip->pszText[0]     = 0;
-        if (static_cast<int>(m_items.size()) > iItem)
+        if (fileList)
         {
-            CSearchInfo  inf         = m_items[iItem];
-
-            std::wstring matchString = inf.filePath + L"\n";
-            if (!inf.exception.empty())
-            {
-                matchString += inf.exception;
-                matchString += L"\n";
-            }
-            std::wstring sFormat = TranslatedString(hResource, IDS_CONTEXTLINE);
-            for (size_t i = 0; i < min(inf.matchLines.size(), 5); ++i)
-            {
-                std::wstring matchText = inf.matchLines[i];
-                CStringUtils::trim(matchText);
-                matchString += CStringUtils::Format(sFormat.c_str(), inf.matchLinesNumbers[i], matchText.c_str());
-            }
-            if (inf.matchLines.size() > 5)
-            {
-                std::wstring sx  = TranslatedString(hResource, IDS_XMOREMATCHES);
-                std::wstring ssx = CStringUtils::Format(sx.c_str(), static_cast<int>(inf.matchLines.size() - 5));
-                matchString += ssx;
-            }
-            wcsncpy_s(pInfoTip->pszText, pInfoTip->cchTextMax, matchString.c_str(), pInfoTip->cchTextMax - 1LL);
+            pInfo = &m_items[listIndex];
         }
+        else
+        {
+            auto tup   = m_listItems[listIndex];
+            int  iItem = std::get<0>(tup);
+            pInfo      = &m_items[iItem];
+            subIndex   = std::get<1>(tup);
+        }
+
+        std::wstring matchString = pInfo->filePath + L"\n";
+        if (!pInfo->exception.empty())
+        {
+            matchString += pInfo->exception;
+            matchString += L"\n";
+        }
+
+        std::wstring sFormat = TranslatedString(hResource, IDS_CONTEXTLINE);
+        int          leftMax = static_cast<int>(pInfo->matchLinesMap.size());
+        int          showMax = min(leftMax, subIndex + 5);
+        for (; subIndex < showMax; ++subIndex)
+        {
+            std::wstring matchText = pInfo->matchLinesMap[pInfo->matchLinesNumbers[subIndex]];
+            CStringUtils::rtrim(matchText);
+            DWORD iShow = 0;
+            if (pInfo->matchColumnsNumbers[subIndex] > 8)
+            {
+                // 6 + 1 prefix chars would give a context
+                iShow = pInfo->matchColumnsNumbers[subIndex] - 8;
+            }
+            if (iShow < matchText.size()) // tricky including binary files that with leading L'\x00'
+            {
+                matchText = matchText.substr(iShow, 50);
+            }
+            matchString += CStringUtils::Format(sFormat.c_str(), pInfo->matchLinesNumbers[subIndex], matchText.c_str());
+        }
+        leftMax -= subIndex;
+        if (leftMax > 0)
+        {
+            std::wstring sx  = TranslatedString(hResource, IDS_XMOREMATCHES);
+            std::wstring ssx = CStringUtils::Format(sx.c_str(), leftMax);
+            matchString += ssx;
+        }
+        wcsncpy_s(pInfoTip->pszText, pInfoTip->cchTextMax, matchString.c_str(), pInfoTip->cchTextMax - 1LL);
     }
-    if (lpNMItemActivate->hdr.code == LVN_GETDISPINFO)
+    else if (lpNMItemActivate->hdr.code == LVN_GETDISPINFO)
     {
         static const std::wstring sBinary         = TranslatedString(hResource, IDS_BINARY);
         static const std::wstring sReadError      = TranslatedString(hResource, IDS_READERROR);
@@ -2625,7 +2992,7 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                         case 1: // binary
                             wcsncpy_s(pItem->pszText, pItem->cchTextMax, sBinary.c_str(), pItem->cchTextMax);
                             break;
-                        case 3: // path
+                        case 4: // path
                             wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filePath.substr(0, pInfo->filePath.size() - pInfo->filePath.substr(pInfo->filePath.find_last_of('\\') + 1).size() - 1).c_str(), pItem->cchTextMax - 1LL);
                             break;
                         default:
@@ -2650,18 +3017,23 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
                         case 1: // line number
                             swprintf_s(pItem->pszText, pItem->cchTextMax, L"%ld", pInfo->matchLinesNumbers[subIndex]);
                             break;
-                        case 2: // line
+                        case 2: // column number
+                            swprintf_s(pItem->pszText, pItem->cchTextMax, L"%ld", pInfo->matchColumnsNumbers[subIndex]);
+                            break;
+                        case 3: // line
                         {
                             std::wstring line;
-                            if (pInfo->matchLines.size() > static_cast<size_t>(subIndex))
-                                line = pInfo->matchLines[subIndex];
-                            std::ranges::replace(line, '\t', ' ');
-                            std::ranges::replace(line, '\n', ' ');
-                            std::ranges::replace(line, '\r', ' ');
+                            if (pInfo->matchLinesMap.contains(pInfo->matchLinesNumbers[subIndex]))
+                                line = pInfo->matchLinesMap.at(pInfo->matchLinesNumbers[subIndex]);
+                            for (auto& c : line)
+                            {
+                                if (c < 32)
+                                    c = c + 0x2400;
+                            }
                             wcsncpy_s(pItem->pszText, pItem->cchTextMax, line.c_str(), pItem->cchTextMax - 1LL);
                         }
                         break;
-                        case 3: // path
+                        case 4: // path
                             wcsncpy_s(pItem->pszText, pItem->cchTextMax, pInfo->filePath.substr(0, pInfo->filePath.size() - pInfo->filePath.substr(pInfo->filePath.find_last_of('\\') + 1).size() - 1).c_str(), pItem->cchTextMax - 1LL);
                             break;
                         default:
@@ -2677,74 +3049,153 @@ void CSearchDlg::DoListNotify(LPNMITEMACTIVATE lpNMItemActivate)
             }
         }
     }
+    else if (lpNMItemActivate->hdr.code == LVN_ODFINDITEM)
+    {
+        NMLVFINDITEM* pFindItem = reinterpret_cast<NMLVFINDITEM*>(lpNMItemActivate);
+        if (pFindItem->lvfi.flags & LVFI_STRING)
+        {
+            bool fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
+
+            auto findLen  = wcslen(pFindItem->lvfi.psz);
+            if (fileList)
+            {
+                for (size_t i = pFindItem->iStart; i < m_items.size(); ++i)
+                {
+                    auto name = m_items[i].filePath.substr(m_items[i].filePath.find_last_of('\\') + 1);
+                    ;
+                    if (_wcsnicmp(name.c_str(), pFindItem->lvfi.psz, findLen) == 0)
+                    {
+                        return i;
+                    }
+                }
+                if (pFindItem->lvfi.flags & LVFI_WRAP)
+                {
+                    size_t end = pFindItem->iStart;
+                    if (end > m_items.size())
+                        end = static_cast<size_t>(m_items.size());
+                    for (size_t i = 0; i < end; ++i)
+                    {
+                        auto name = m_items[i].filePath.substr(m_items[i].filePath.find_last_of('\\') + 1);
+                        ;
+                        if (_wcsnicmp(name.c_str(), pFindItem->lvfi.psz, findLen) == 0)
+                        {
+                            return i;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (size_t i = pFindItem->iStart; i < m_listItems.size(); ++i)
+                {
+                    auto index = std::get<0>(m_listItems[i]);
+                    auto name  = m_items[index].filePath.substr(m_items[index].filePath.find_last_of('\\') + 1);
+                    ;
+                    if (_wcsnicmp(name.c_str(), pFindItem->lvfi.psz, findLen) == 0)
+                    {
+                        return i;
+                    }
+                }
+                if (pFindItem->lvfi.flags & LVFI_WRAP)
+                {
+                    size_t end = pFindItem->iStart;
+                    if (end > m_listItems.size())
+                        end = static_cast<size_t>(m_listItems.size());
+                    for (size_t i = 0; i < end; ++i)
+                    {
+                        auto index = std::get<0>(m_listItems[i]);
+                        auto name  = m_items[index].filePath.substr(m_items[index].filePath.find_last_of('\\') + 1);
+                        ;
+                        if (_wcsnicmp(name.c_str(), pFindItem->lvfi.psz, findLen) == 0)
+                        {
+                            return i;
+                        }
+                    }
+                }
+            }
+        }
+        return -1L;
+    }
+    return 0L;
+}
+
+void static OpenFileInProcess(LPWSTR lpCommandLine)
+{
+    STARTUPINFO         startupInfo{};
+    PROCESS_INFORMATION processInfo{};
+    startupInfo.cb = sizeof(STARTUPINFO);
+    CreateProcess(nullptr, lpCommandLine, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startupInfo, &processInfo);
+    CloseHandle(processInfo.hThread);
+    CloseHandle(processInfo.hProcess);
 }
 
 void CSearchDlg::OpenFileAtListIndex(int listIndex)
 {
-    int          iItem  = GetSelectedListIndex(listIndex);
-    CSearchInfo  inf    = m_items[iItem];
-    size_t       dotPos = inf.filePath.rfind('.');
-    std::wstring ext;
-    if (dotPos != std::wstring::npos)
-        ext = inf.filePath.substr(dotPos);
+    CSearchInfo* pInfo;
+    auto         subIndex = 0;
 
-    CRegStdString regEditorCmd(L"Software\\grepWin\\editorcmd");
-    std::wstring  cmd = regEditorCmd;
-    if (bPortable)
-        cmd = g_iniFile.GetValue(L"global", L"editorcmd", L"");
-    if (!cmd.empty() && !inf.readError && inf.encoding != CTextFile::UnicodeType::Binary)
+    bool         fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
+    if (fileList)
     {
-        bool fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
-        if (!fileList)
-        {
-            HWND    hListControl          = GetDlgItem(*this, IDC_RESULTLIST);
-            wchar_t textLineBuf[MAX_PATH] = {0};
-            LVITEM  lv                    = {0};
-            lv.iItem                      = listIndex;
-            lv.iSubItem                   = 1; // line number
-            lv.mask                       = LVIF_TEXT;
-            lv.pszText                    = textLineBuf;
-            lv.cchTextMax                 = _countof(textLineBuf);
-            if (ListView_GetItem(hListControl, &lv))
-            {
-                if (_wtol(textLineBuf) == 0)
-                    wcscpy_s(textLineBuf, L"0");
-                SearchReplace(cmd, L"%line%", textLineBuf);
-            }
-        }
-        else
-        {
-            // use the first matching line in this file
-            if (!inf.matchLinesNumbers.empty())
-                SearchReplace(cmd, L"%line%", CStringUtils::Format(L"%lu", inf.matchLinesNumbers[0]));
-            else
-                SearchReplace(cmd, L"%line%", L"0");
-        }
-
-        SearchReplace(cmd, L"%path%", inf.filePath.c_str());
-
-        STARTUPINFO         startupInfo{};
-        PROCESS_INFORMATION processInfo{};
-        startupInfo.cb = sizeof(STARTUPINFO);
-        CreateProcess(nullptr, const_cast<wchar_t*>(cmd.c_str()), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startupInfo, &processInfo);
-        CloseHandle(processInfo.hThread);
-        CloseHandle(processInfo.hProcess);
-        return;
+        pInfo = &m_items[listIndex];
+    }
+    else
+    {
+        auto tup   = m_listItems[listIndex];
+        int  iItem = std::get<0>(tup);
+        pInfo      = &m_items[iItem];
+        subIndex   = std::get<1>(tup);
     }
 
+    std::wstring line = L"1";
+    std::wstring move = L"0";
+    if (subIndex < static_cast<int>(pInfo->matchLinesNumbers.size()) &&
+        subIndex < static_cast<int>(pInfo->matchColumnsNumbers.size()))
+    {
+        line = std::to_wstring(pInfo->matchLinesNumbers[subIndex]);
+        move = std::to_wstring(pInfo->matchColumnsNumbers[subIndex]);
+    }
+
+    {
+        CRegStdString regEditorCmd(L"Software\\grepWin\\editorcmd");
+        std::wstring  cmd = regEditorCmd;
+        if (bPortable)
+            cmd = g_iniFile.GetValue(L"global", L"editorcmd", L"");
+        if (!cmd.empty() && !pInfo->readError && pInfo->encoding != CTextFile::UnicodeType::Binary)
+        {
+            SearchReplace(cmd, L"%line%", line);
+            SearchReplace(cmd, L"%column%", move);
+            SearchReplace(cmd, L"%path%", pInfo->filePath);
+            OpenFileInProcess(const_cast<wchar_t*>(cmd.c_str()));
+            return;
+        }
+    }
+
+    size_t       dotPos = pInfo->filePath.rfind('.');
+    std::wstring ext;
+    if (dotPos != std::wstring::npos)
+        ext = pInfo->filePath.substr(dotPos);
+
     DWORD bufLen = 0;
-    if (AssocQueryString(ASSOCF_INIT_DEFAULTTOSTAR, ASSOCSTR_DDECOMMAND, ext.c_str(), nullptr, nullptr, &bufLen) == S_OK)
+    if (SUCCEEDED(AssocQueryString(ASSOCF_INIT_DEFAULTTOSTAR, ASSOCSTR_DDECOMMAND, ext.c_str(), nullptr, nullptr, &bufLen)))
     {
         if (bufLen)
         {
             // application requires DDE to open the file:
             // since we can't do this the easy way with CreateProcess, we use ShellExecute instead
-            ShellExecute(*this, nullptr, inf.filePath.c_str(), nullptr, nullptr, SW_SHOW);
+            ShellExecute(*this, nullptr, pInfo->filePath.c_str(), nullptr, nullptr, SW_SHOW);
             return;
         }
     }
+
     bufLen = 0;
     AssocQueryString(ASSOCF_INIT_DEFAULTTOSTAR, ASSOCSTR_COMMAND, ext.c_str(), nullptr, nullptr, &bufLen);
+    if (bufLen == 0)
+    {
+        // fall back to using ShellExecute
+        ShellExecute(*this, nullptr, pInfo->filePath.c_str(), nullptr, nullptr, SW_SHOW);
+        return;
+    }
     auto cmdBuf = std::make_unique<wchar_t[]>(bufLen + 1LL);
     AssocQueryString(ASSOCF_INIT_DEFAULTTOSTAR, ASSOCSTR_COMMAND, ext.c_str(), nullptr, cmdBuf.get(), &bufLen);
     std::wstring application = cmdBuf.get();
@@ -2752,137 +3203,100 @@ void CSearchDlg::OpenFileAtListIndex(int listIndex)
     DWORD        len         = ExpandEnvironmentStrings(application.c_str(), nullptr, 0);
     cmdBuf                   = std::make_unique<wchar_t[]>(len + 1LL);
     ExpandEnvironmentStrings(application.c_str(), cmdBuf.get(), len);
-    application = cmdBuf.get();
+    application          = cmdBuf.get();
 
     // resolve parameters
-    if (application.find(L"%1") == std::wstring::npos)
-        application += L" %1";
-
-    bool         fileList = (IsDlgButtonChecked(*this, IDC_RESULTFILES) == BST_CHECKED);
-    std::wstring lineNumberParamBefore;
-    std::wstring lineNumberParam;
-    wchar_t      textLineBuf[MAX_PATH] = {0};
-    if (!fileList)
-    {
-        HWND   hListControl = GetDlgItem(*this, IDC_RESULTLIST);
-        LVITEM lv           = {0};
-        lv.iItem            = listIndex;
-        lv.iSubItem         = 1; // line number
-        lv.mask             = LVIF_TEXT;
-        lv.pszText          = textLineBuf;
-        lv.cchTextMax       = _countof(textLineBuf);
-        if (!ListView_GetItem(hListControl, &lv))
-        {
-            textLineBuf[0] = '\0';
-        }
-    }
-    else if (!inf.matchLinesNumbers.empty())
-    {
-        // use the first matching line in this file
-        swprintf_s(textLineBuf, L"%ld", inf.matchLinesNumbers[0]);
-    }
-    if (textLineBuf[0] == 0)
-        wcscpy_s(textLineBuf, L"0");
     std::wstring appname = application;
     std::ranges::transform(appname, appname.begin(), ::towlower);
+    std::wstring quote = L"\"";
+    std::wstring params;
+    std::wstring paramsSuffix;
+    bool         bDontQuotePath = FALSE;
+
+    std::wstring argHolder      = L"%1";
+    size_t       holderIndex    = application.find(argHolder);
+    size_t       reservedLength;
+    if (holderIndex == std::wstring::npos)
+    {
+        reservedLength = application.length() + 1;
+        application += L" %1";
+    }
+    else
+    {
+        reservedLength = holderIndex;
+        if (holderIndex > 0 && application[holderIndex - 1] == L'"')
+        {
+            reservedLength--;
+            // replace "%1" with %1
+            SearchReplace(application, L"\"%1\"", argHolder);
+        }
+    }
 
     // now find out if the application which opens the file is known to us
-    // and if it has a 'linenumber' switch to jump directly to a specific
-    // line number.
+    // and add extra params to the "%1" for better locating.
     if (appname.find(L"notepad++.exe") != std::wstring::npos)
     {
-        // notepad++
-        lineNumberParam = CStringUtils::Format(L"-n%s", textLineBuf);
+        params = CStringUtils::Format(L"-n%s -c%s ", line.c_str(), move.c_str());
     }
     else if (appname.find(L"xemacs.exe") != std::wstring::npos)
     {
-        // XEmacs
-        lineNumberParam = CStringUtils::Format(L"+%s", textLineBuf);
+        params = CStringUtils::Format(L"+%s ", line.c_str());
     }
-    else if (appname.find(L"uedit32.exe") != std::wstring::npos)
+    else if ((appname.find(L"uedit32.exe") != std::wstring::npos) || (appname.find(L"uedit64.exe") != std::wstring::npos))
     {
-        // UltraEdit
-        lineNumberParam = CStringUtils::Format(L"-l%s", textLineBuf);
+        // UltraEdit, `/<ln>/<cn>` covers more (old) versions than `-l<ln> -c<ln>`
+        params         = quote;
+        paramsSuffix   = CStringUtils::Format(L"/%s/%s\"", line.c_str(), move.c_str());
+        bDontQuotePath = TRUE;
     }
-    else if (appname.find(L"codewright.exe") != std::wstring::npos)
+    else if ((appname.find(L"notepad4.exe") != std::wstring::npos) ||
+             (appname.find(L"notepad3.exe") != std::wstring::npos) ||
+             (appname.find(L"notepad2.exe") != std::wstring::npos))
     {
-        // CodeWright
-        lineNumberParam = CStringUtils::Format(L"-G%s", textLineBuf);
-    }
-    else if (appname.find(L"notepad2.exe") != std::wstring::npos)
-    {
-        // Notepad2
-        auto escapedSearch = m_searchString;
-        SearchReplace(escapedSearch, L"\"", L"\\\"");
-        lineNumberParamBefore = CStringUtils::Format(L"/g %s /mr \"%s\"", textLineBuf, escapedSearch.c_str());
+        std::wstring match;
+        if (!pInfo->matchLinesMap.empty())
+        {
+            // not binary
+            match = pInfo->matchLinesMap[pInfo->matchLinesNumbers[subIndex]].substr(pInfo->matchColumnsNumbers[subIndex] - 1, pInfo->matchLengths[subIndex]);
+            escapeForRegexEx(match, 1);
+            if (match.length() > 32767 - 1 - 2 - 2 - 13 - pInfo->filePath.length() - reservedLength)
+            {
+                match.clear();
+            }
+        }
+        params = CStringUtils::Format(L"/g %s,%s /mr \"%s\" ", line.c_str(), move.c_str(), match.c_str());
     }
     else if ((appname.find(L"bowpad.exe") != std::wstring::npos) || (appname.find(L"bowpad64.exe") != std::wstring::npos))
     {
-        // BowPad
-        lineNumberParam = CStringUtils::Format(L"/line:%s", textLineBuf);
+        paramsSuffix = CStringUtils::Format(L" /line:%s", line.c_str());
     }
     else if (appname.find(L"code.exe") != std::wstring::npos)
     {
         // Visual Studio Code
-        lineNumberParamBefore = L"--goto";
-        lineNumberParam       = CStringUtils::Format(L":%s", textLineBuf);
+        params       = L"-g ";
+        paramsSuffix = CStringUtils::Format(L":%s:%s", line.c_str(), move.c_str());
+    }
+    else if (application.find(L"-single-argument") != std::wstring::npos)
+    {
+        // Chrome family: all following are path that does not need double quotes, even if there are spaces
+        // https://chromium.googlesource.com/chromium/src/+/refs/heads/main/base/command_line.cc
+        bDontQuotePath = TRUE;
     }
 
-    // replace "%1" with %1
-    std::wstring           tag     = L"\"%1\"";
-    std::wstring           repl    = L"%1";
-    std::wstring::iterator itBegin = search(application.begin(), application.end(), tag.begin(), tag.end());
-    if (itBegin != application.end())
+    if (bDontQuotePath)
     {
-        std::wstring::iterator itEnd = itBegin + tag.size();
-        application.replace(itBegin, itEnd, repl);
+        params += pInfo->filePath;
     }
-    // replace %1 with "path/of/selected/file"
-    tag = L"%1";
-    if (application.find(L"rundll32.exe") == std::wstring::npos && application.find(L"--single-argument") == std::wstring::npos)
-        repl = L"\"" + inf.filePath + L"\"";
     else
-        repl = inf.filePath;
-    if (!lineNumberParamBefore.empty())
     {
-        repl = lineNumberParamBefore + L" " + repl;
+        params += quote + pInfo->filePath + quote;
     }
-    itBegin = std::ranges::search(application, tag).begin();
-    if (itBegin != application.end())
-    {
-        std::wstring::iterator itEnd = itBegin + tag.size();
-        application.replace(itBegin, itEnd, repl);
-    }
-    if (!lineNumberParam.empty())
-    {
-        if (!lineNumberParam.starts_with(L":"))
-        {
-            application += L" ";
-        }
-        application += lineNumberParam;
-    }
+    params += paramsSuffix;
 
-    STARTUPINFO         startupInfo{};
-    PROCESS_INFORMATION processInfo{};
-    startupInfo.cb = sizeof(STARTUPINFO);
-    CreateProcess(nullptr, const_cast<wchar_t*>(application.c_str()), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startupInfo, &processInfo);
-    CloseHandle(processInfo.hThread);
-    CloseHandle(processInfo.hProcess);
-}
+    // replace %1 with the final decorated path
+    SearchReplace(application, argHolder, params);
 
-bool grepWinIsRegexValid(const std::wstring& searchString)
-{
-    // check if the regex is valid
-    bool bValid = true;
-    try
-    {
-        boost::wregex expression = boost::wregex(searchString);
-    }
-    catch (const std::exception&)
-    {
-        bValid = false;
-    }
-    return bValid;
+    OpenFileInProcess(const_cast<wchar_t*>(application.c_str()));
 }
 
 bool CSearchDlg::SaveSettings()
@@ -2934,7 +3348,7 @@ bool CSearchDlg::SaveSettings()
     if (m_bUseRegex)
     {
         // check if the regex is valid before doing the search
-        if (!grepWinIsRegexValid(m_searchString) && !m_searchString.empty())
+        if (!m_searchString.empty() && !isSearchValid())
         {
             return false;
         }
@@ -2943,13 +3357,13 @@ bool CSearchDlg::SaveSettings()
     if (m_bUseRegexForPaths)
     {
         // check if the regex is valid before doing the search
-        if (!grepWinIsRegexValid(m_patternRegex) && !m_patternRegex.empty())
+        if (!m_patternRegex.empty() && !isFileNameMatchRegexValid())
         {
             return false;
         }
     }
     // check if the Exclude Dirs regex is valid before doing the search
-    if (!grepWinIsRegexValid(m_excludeDirsPatternRegex) && !m_excludeDirsPatternRegex.empty())
+    if (!m_excludeDirsPatternRegex.empty() && !isExcludeDirsRegexValid())
     {
         return false;
     }
@@ -2987,7 +3401,7 @@ bool CSearchDlg::SaveSettings()
         m_dateLimit = IDC_RADIO_DATE_OLDER - IDC_RADIO_DATE_ALL;
     if (IsDlgButtonChecked(*this, IDC_RADIO_DATE_BETWEEN) == BST_CHECKED)
         m_dateLimit = IDC_RADIO_DATE_BETWEEN - IDC_RADIO_DATE_ALL;
-    SYSTEMTIME sysTime = {0};
+    SYSTEMTIME sysTime = {};
     DateTime_GetSystemtime(GetDlgItem(*this, IDC_DATEPICK1), &sysTime);
     SystemTimeToFileTime(&sysTime, &m_date1);
     DateTime_GetSystemtime(GetDlgItem(*this, IDC_DATEPICK2), &sysTime);
@@ -3082,6 +3496,7 @@ bool CSearchDlg::SaveSettings()
     return true;
 }
 
+// matches the whole of the input
 bool grepWinMatchI(const std::wstring& theRegex, const wchar_t* pText)
 {
     try
@@ -3099,11 +3514,15 @@ bool grepWinMatchI(const std::wstring& theRegex, const wchar_t* pText)
     return false;
 }
 
+/* rules:
+    1. treat dir as special file
+    2. no limits on user specified files
+    3. search empty means counting only mode
+    4. real search/replace does not check dir size nor date
+*/
 DWORD CSearchDlg::SearchThread()
 {
     ProfileTimer              profile(L"SearchThread");
-
-    auto                      pathBuf        = std::make_unique<wchar_t[]>(MAX_PATH_NEW);
 
     // split the path string into single paths and
     // add them to an array
@@ -3114,64 +3533,31 @@ DWORD CSearchDlg::SearchThread()
     {
         pos            = wcscspn(pBufSearchPath, L"|");
         std::wstring s = std::wstring(pBufSearchPath, pos);
-        if (!s.empty())
+        // pre-cleaned for history
+        if (!s.empty() && PathFileExists(s.c_str()))
         {
-            // Remove extra backslashes except for the UNC identifier
-            std::string::size_type found = s.find_first_of('\\', 1);
-            while (found != std::string::npos)
-            {
-                while (s[found + 1] == '\\')
-                {
-                    s.erase(found + 1, 1);
-                }
-                found = s.find_first_of('\\', found + 1);
-            }
-            CStringUtils::rtrim(s, L"\\/ ");
+            if (s.size() == 2 && s[1] == L':')
+                s += L'\\'; // ensure root paths have a backslash
             pathVector.push_back(s);
         }
         pBufSearchPath += pos;
         pBufSearchPath++;
     } while (*pBufSearchPath && (*(pBufSearchPath - 1)));
 
-    if (!m_bUseRegex && !m_replaceString.empty())
+    if (!m_bUseRegex)
     {
-        // escape all characters in the replace string
-        std::wstring sRepl;
-        for (const auto& c : m_replaceString)
+        if (!m_searchString.empty())
         {
-            switch (c)
-            {
-                case '$':
-                // case '\\':
-                case '(':
-                case ')':
-                case '?':
-                case ':':
-                    sRepl += L"\\";
-                    break;
-                default:
-                    break;
-            }
-            sRepl += c;
+            escapeForRegexEx(m_searchString, 0);
+            SearchReplace(m_searchString, L"\r\n", L"(?:\\n|\\r|\\r\\n)"); // multi-line
         }
-        m_replaceString = sRepl;
+        if (m_bReplace && !m_replaceString.empty())
+        {
+            escapeForReplaceText(m_replaceString);
+        }
     }
 
     SendMessage(*this, SEARCH_START, 0, 0);
-
-    std::wstring searchStringutf16;
-
-    for (auto c : m_searchString)
-    {
-        searchStringutf16 += c;
-        if (std::iswalpha(c) && ((c & 0xFF00) == 0))
-            searchStringutf16 += L"\\x00";
-        else
-        {
-            searchStringutf16 = m_searchString;
-            break;
-        }
-    }
 
     // use a thread pool:
     // use 2 threads less than processors are available,
@@ -3179,69 +3565,99 @@ DWORD CSearchDlg::SearchThread()
     // the UI thread and this one.
     ThreadPool tp(max(std::thread::hardware_concurrency() - 2, 1));
 
+    bool       bCountingOnly = m_searchString.empty();
+
     for (const auto& cSearchPath : pathVector)
     {
-        std::wstring searchPath = cSearchPath;
-        size_t       endPos     = searchPath.find_last_not_of(L" \\");
-        if (std::wstring::npos != endPos)
+        bool         searchRootIsDir;
+        std::wstring searchRoot;
+        if (PathIsDirectory(cSearchPath.c_str()))
         {
-            searchPath = searchPath.substr(0, endPos + 1);
-            if (searchPath[searchPath.length() - 1] == ':')
-                searchPath += L"\\";
+            searchRootIsDir = true;
+            searchRoot      = cSearchPath;
         }
-        std::wstring searchRoot = searchPath;
-        if (!searchPath.empty())
+        else
         {
-            bool bAlwaysSearch = false;
-            if (!PathIsDirectory(searchPath.c_str()))
+            searchRootIsDir = false;
+            searchRoot      = cSearchPath.substr(0, cSearchPath.find_last_of('\\'));
+        }
+
+        CDirFileEnum fileEnumerator(cSearchPath.c_str());
+        if (!m_bIncludeSymLinks)
+            fileEnumerator.SetAttributesToIgnore(FILE_ATTRIBUTE_REPARSE_POINT);
+        bool         bRecurse     = searchRootIsDir && m_bIncludeSubfolders;
+        bool         bIsDirectory = false;
+        std::wstring sPath;
+
+        while ((fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse)) && !m_cancelled)
+        {
+            if (m_backupAndTempFiles.contains(sPath))
+                continue;
+
+            const WIN32_FIND_DATA* pFindData    = fileEnumerator.GetFileInfo();
+            FILETIME               fileTime     = pFindData->ftLastWriteTime;
+            uint64_t               fullFileSize = (static_cast<uint64_t>(pFindData->nFileSizeHigh) << 32) | pFindData->nFileSizeLow;
+
+            bool                   bSearch      = true;
+
+            if (searchRootIsDir)
             {
-                bAlwaysSearch = true;
-                searchRoot    = searchRoot.substr(0, searchRoot.find_last_of('\\'));
-            }
-            bool         bIsDirectory = false;
-            CDirFileEnum fileEnumerator(searchPath.c_str());
-            if (!m_bIncludeSymLinks)
-                fileEnumerator.SetAttributesToIgnore(FILE_ATTRIBUTE_REPARSE_POINT);
-            bool         bRecurse = m_bIncludeSubfolders;
-            std::wstring sPath;
-            while ((fileEnumerator.NextFile(sPath, &bIsDirectory, bRecurse)) && ((!m_cancelled) || (bAlwaysSearch)))
-            {
-                if (bAlwaysSearch && _wcsicmp(searchPath.c_str(), sPath.c_str()))
-                    bAlwaysSearch = false;
-                if (m_backupAndTempFiles.contains(sPath))
-                    continue;
-                wcscpy_s(pathBuf.get(), MAX_PATH_NEW, sPath.c_str());
-                if (!bIsDirectory)
+                bSearch = (m_bIncludeHidden || ((pFindData->dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == 0)) &&
+                          (m_bIncludeSystem || ((pFindData->dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) == 0));
+                if (bSearch)
                 {
-                    bool     bSearch      = false;
-                    uint64_t fullFileSize = 0;
-                    FILETIME ft           = {0};
-                    if (bAlwaysSearch)
+                    if (bIsDirectory)
                     {
-                        const WIN32_FIND_DATA* pFindData = fileEnumerator.GetFileInfo();
-                        wcscpy_s(pathBuf.get(), MAX_PATH_NEW, searchPath.c_str());
-                        fullFileSize = (static_cast<uint64_t>(pFindData->nFileSizeHigh) << 32) | pFindData->nFileSizeLow;
-                        ft           = pFindData->ftLastWriteTime;
+                        if (m_bIncludeSubfolders)
+                        {
+                            // dir not excluded
+                            bSearch = m_excludeDirsPatternRegex.empty();
+                            if (!bSearch)
+                            {
+                                bool bExcluded = grepWinMatchI(m_excludeDirsPatternRegex, pFindData->cFileName) ||
+                                                 grepWinMatchI(m_excludeDirsPatternRegex, sPath.c_str());
+                                if (!bExcluded)
+                                {
+                                    std::wstring relPath = sPath.substr(cSearchPath.size() + 1);
+                                    if (relPath.find(L'\\') != std::wstring::npos)
+                                    {
+                                        bExcluded = grepWinMatchI(m_excludeDirsPatternRegex, relPath.c_str());
+                                    }
+                                }
+                                bSearch = !bExcluded;
+                            }
+                        }
+                        else
+                        {
+                            bSearch = false;
+                        }
+                        bRecurse = bSearch;
+                        if (bSearch && !m_patternRegex.empty())
+                        {
+                            bSearch = MatchPath(sPath.c_str());
+                        }
                     }
                     else
                     {
-                        const WIN32_FIND_DATA* pFindData = fileEnumerator.GetFileInfo();
-                        bSearch                          = ((m_bIncludeHidden) || ((pFindData->dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == 0));
-                        bSearch                          = bSearch && ((m_bIncludeSystem) || ((pFindData->dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) == 0));
-                        fullFileSize                     = (static_cast<uint64_t>(pFindData->nFileSizeHigh) << 32) | pFindData->nFileSizeLow;
-                        ft                               = pFindData->ftLastWriteTime;
-                        if (!m_bAllSize && bSearch)
+                        // name match
+                        bSearch  = MatchPath(sPath.c_str());
+                        bRecurse = false;
+                    }
+
+                    if (bSearch && (!bIsDirectory || bCountingOnly))
+                    {
+                        if (!m_bAllSize)
                         {
                             switch (m_sizeCmp)
                             {
                                 case 0: // less than
-                                    bSearch = bSearch && (fullFileSize < m_lSize);
+                                    bSearch &= fullFileSize < m_lSize;
                                     break;
                                 case 1: // equal
-                                    bSearch = bSearch && (fullFileSize == m_lSize);
+                                    bSearch &= fullFileSize == m_lSize;
                                     break;
                                 case 2: // greater than
-                                    bSearch = bSearch && (fullFileSize > m_lSize);
+                                    bSearch &= fullFileSize > m_lSize;
                                     break;
                                 default:
                                     break;
@@ -3255,118 +3671,51 @@ DWORD CSearchDlg::SearchThread()
                                 case IDC_RADIO_DATE_ALL:
                                     break;
                                 case IDC_RADIO_DATE_NEWER:
-                                    bSearch = CompareFileTime(&ft, &m_date1) >= 0;
+                                    bSearch &= CompareFileTime(&fileTime, &m_date1) >= 0;
                                     break;
                                 case IDC_RADIO_DATE_OLDER:
-                                    bSearch = CompareFileTime(&ft, &m_date1) <= 0;
+                                    bSearch &= CompareFileTime(&fileTime, &m_date1) <= 0;
                                     break;
                                 case IDC_RADIO_DATE_BETWEEN:
-                                    bSearch = CompareFileTime(&ft, &m_date1) >= 0;
-                                    bSearch = bSearch && (CompareFileTime(&ft, &m_date2) <= 0);
+                                    bSearch &= CompareFileTime(&fileTime, &m_date1) >= 0 &&
+                                               CompareFileTime(&fileTime, &m_date2) <= 0;
                                     break;
                             }
                         }
                     }
-                    bRecurse      = ((m_bIncludeSubfolders) && (bSearch));
-                    bool bPattern = MatchPath(pathBuf.get());
-
-                    if ((bSearch && bPattern) || (bAlwaysSearch))
-                    {
-                        CSearchInfo sInfo(pathBuf.get());
-                        sInfo.fileSize     = fullFileSize;
-                        sInfo.modifiedTime = ft;
-                        if (m_searchString.empty())
-                        {
-                            SendMessage(*this, SEARCH_FOUND, 1, reinterpret_cast<LPARAM>(&sInfo));
-                            SendMessage(*this, SEARCH_PROGRESS, 1, 0);
-                        }
-                        else
-                        {
-                            auto searchFn = [=]() {
-                                SearchFile(sInfo, searchRoot, bAlwaysSearch, m_bIncludeBinary, m_bUseRegex, m_bCaseSensitive, m_bDotMatchesNewline, m_searchString, searchStringutf16, m_cancelled);
-                            };
-                            tp.enqueueWait(searchFn);
-                            // SearchFile(std::move(sinfo), searchRoot, bAlwaysSearch, m_bIncludeBinary, m_bUseRegex, m_bCaseSensitive, m_bDotMatchesNewline, m_searchString, SearchStringutf16, &m_Cancelled);
-                        }
-                    }
-                    else
-                        SendMessage(*this, SEARCH_PROGRESS, 0, 0);
                 }
                 else
                 {
-                    const WIN32_FIND_DATA* pFindData = fileEnumerator.GetFileInfo();
-                    bool                   bSearch   = ((m_bIncludeHidden) || ((pFindData->dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) == 0));
-                    bSearch                          = bSearch && ((m_bIncludeSystem) || ((pFindData->dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) == 0));
-                    std::wstring relPath             = pathBuf.get();
-                    relPath                          = relPath.substr(searchPath.size());
-                    if (!relPath.empty())
-                    {
-                        if (relPath[0] == '\\')
-                            relPath = relPath.substr(1);
-                    }
-                    bool bExcludeDir = bSearch && !m_excludeDirsPatternRegex.empty() &&
-                                       (grepWinMatchI(m_excludeDirsPatternRegex, pFindData->cFileName) ||
-                                        grepWinMatchI(m_excludeDirsPatternRegex, pathBuf.get()) ||
-                                        grepWinMatchI(m_excludeDirsPatternRegex, relPath.c_str()));
-                    bSearch  = bSearch && !bExcludeDir;
-                    bRecurse = ((bIsDirectory) && (m_bIncludeSubfolders) && (bSearch));
-                    if (m_searchString.empty() && m_replaceString.empty())
-                    {
-                        // if there's no search and replace string, include folders in the 'matched' list if they
-                        // match the specified file pattern
-                        if (MatchPath(pathBuf.get()))
-                        {
-                            if (bSearch)
-                            {
-                                switch (m_dateLimit + IDC_RADIO_DATE_ALL)
-                                {
-                                    default:
-                                    case IDC_RADIO_DATE_ALL:
-                                        break;
-                                    case IDC_RADIO_DATE_NEWER:
-                                        bSearch = CompareFileTime(&pFindData->ftLastWriteTime, &m_date1) >= 0;
-                                        break;
-                                    case IDC_RADIO_DATE_OLDER:
-                                        bSearch = CompareFileTime(&pFindData->ftLastWriteTime, &m_date1) <= 0;
-                                        break;
-                                    case IDC_RADIO_DATE_BETWEEN:
-                                        bSearch = CompareFileTime(&pFindData->ftLastWriteTime, &m_date1) >= 0;
-                                        bSearch = bSearch && (CompareFileTime(&pFindData->ftLastWriteTime, &m_date2) <= 0);
-                                        break;
-                                }
-                            }
-                            if (!m_bAllSize && bSearch)
-                            {
-                                // assume a 'file'-size of zero for dirs
-                                switch (m_sizeCmp)
-                                {
-                                    case 0: // less than
-                                        bSearch = bSearch && (0 < m_lSize);
-                                        break;
-                                    case 1: // equal
-                                        bSearch = bSearch && (0 == m_lSize);
-                                        break;
-                                    case 2: // greater than
-                                        bSearch = bSearch && (0 > m_lSize);
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                            if (bSearch)
-                            {
-                                CSearchInfo sInfo(pathBuf.get());
-                                sInfo.modifiedTime = pFindData->ftLastWriteTime;
-                                sInfo.folder       = true;
-                                SendMessage(*this, SEARCH_FOUND, 1, reinterpret_cast<LPARAM>(&sInfo));
-                            }
-                        }
-                    }
+                    bRecurse = false;
                 }
-                bAlwaysSearch = false;
+            }
+
+            if (bSearch)
+            {
+                CSearchInfo sInfo(sPath);
+                sInfo.modifiedTime = fileTime;
+                sInfo.folder       = bIsDirectory;
+                sInfo.fileSize     = fullFileSize;
+                if (bCountingOnly)
+                {
+                    SendMessage(*this, SEARCH_FOUND, 1, reinterpret_cast<LPARAM>(&sInfo));
+                    SendMessage(*this, SEARCH_PROGRESS, 1, 0);
+                }
+                else if (!bIsDirectory)
+                {
+                    auto searchFn = [=]() {
+                        SearchFile(sInfo, searchRoot);
+                    };
+                    tp.enqueueWait(searchFn);
+                }
+            }
+            else if (!bIsDirectory || (bCountingOnly && m_patternRegex.empty()))
+            {
+                SendMessage(*this, SEARCH_PROGRESS, 0, 0);
             }
         }
     }
+
     tp.waitFinished();
     SendMessage(*this, SEARCH_END, 0, 0);
     m_dwThreadRunning = false;
@@ -3568,6 +3917,9 @@ void CSearchDlg::SetDateLimit(int dateLimit, FILETIME t1, FILETIME t2)
 
 bool CSearchDlg::MatchPath(LPCTSTR pathBuf) const
 {
+    if (m_patterns.empty())
+        return true;
+
     bool        bPattern = false;
     // find start of pathname
     const auto* pName    = wcsrchr(pathBuf, '\\');
@@ -3577,73 +3929,620 @@ bool CSearchDlg::MatchPath(LPCTSTR pathBuf) const
         pName++; // skip the last '\\' char
     if (m_bUseRegexForPaths)
     {
-        if (m_patterns.empty())
+        if (grepWinMatchI(m_patternRegex, pName))
             bPattern = true;
-        else
-        {
-            if (grepWinMatchI(m_patternRegex, pName))
-                bPattern = true;
-            // for a regex check, also test with the full path
-            else if (grepWinMatchI(m_patternRegex, pathBuf))
-                bPattern = true;
-        }
+        // for a regex check, also test with the full path
+        else if (grepWinMatchI(m_patternRegex, pathBuf))
+            bPattern = true;
     }
     else
     {
-        if (!m_patterns.empty())
-        {
-            if (m_patterns[0].size() && (m_patterns[0][0] == '-'))
-                bPattern = true;
-
-            std::wstring fName = pName;
-            std::ranges::transform(fName, fName.begin(), ::towlower);
-
-            for (const auto& pattern : m_patterns)
-            {
-                if (!pattern.empty() && pattern.at(0) == '-')
-                    bPattern = bPattern && !wcswildcmp(&(pattern)[1], fName.c_str());
-                else
-                    bPattern = bPattern || wcswildcmp(pattern.c_str(), fName.c_str());
-            }
-        }
-        else
+        if (m_patterns[0].size() && (m_patterns[0][0] == '-'))
             bPattern = true;
+
+        std::wstring fName = pName;
+        std::ranges::transform(fName, fName.begin(), ::towlower);
+
+        for (const auto& pattern : m_patterns)
+        {
+            if (!pattern.empty() && pattern.at(0) == '-')
+                bPattern = bPattern && !wcswildcmp(&(pattern)[1], fName.c_str());
+            else
+                bPattern = bPattern || wcswildcmp(pattern.c_str(), fName.c_str());
+        }
     }
     return bPattern;
 }
 
-void CSearchDlg::SearchFile(CSearchInfo sInfo, const std::wstring& searchRoot, bool bSearchAlways, bool bIncludeBinary, bool bUseRegex, bool bCaseSensitive, bool bDotMatchesNewline, const std::wstring& searchString, const std::wstring& searchStringUtf16Le, std::atomic_bool& bCancelled)
+std::wstring CSearchDlg::BackupFile(const std::wstring& destParentDir, const std::wstring& filePath, bool bMove)
 {
-    int          nFound            = 0;
-    // we keep it simple:
-    // files bigger than 30MB are considered binary. Binary files are searched
-    // as if they're ANSI text files.
-    std::wstring localSearchString = searchString;
-
-    SearchReplace(localSearchString, L"${filepath}", sInfo.filePath);
-    std::wstring fileNameFull = sInfo.filePath.substr(sInfo.filePath.find_last_of('\\') + 1);
-    auto         dotPos       = fileNameFull.find_last_of('.');
-    if (dotPos != std::string::npos)
+    std::wstring backupFile;
+    bool         backupInFolder = bPortable
+                                      ? (_wtoi(g_iniFile.GetValue(L"settings", L"backupinfolder", L"0")) != 0)
+                                      : (static_cast<DWORD>(m_regBackupInFolder) != 0);
+    if (backupInFolder)
     {
-        std::wstring filename = fileNameFull.substr(0, dotPos);
-        SearchReplace(localSearchString, L"${filename}", filename);
-        if (fileNameFull.size() > dotPos)
+        std::wstring backupFolder = destParentDir + L"\\grepWin_backup\\";
+        backupFolder += filePath.substr(destParentDir.size() + 1);
+        backupFolder = CPathUtils::GetParentDirectory(backupFolder);
+        CPathUtils::CreateRecursiveDirectory(backupFolder);
+        backupFile = backupFolder + L"\\" + CPathUtils::GetFileName(filePath);
+    }
+    else
+    {
+        backupFile = filePath + L".bak";
+    }
+    SetFileAttributes(backupFile.c_str(), 0);
+    bool bOk = false;
+    if (bMove)
+    {
+        bOk = MoveFileEx(filePath.c_str(), backupFile.c_str(), MOVEFILE_REPLACE_EXISTING);
+    }
+    else
+    {
+        bOk = CopyFile(filePath.c_str(), backupFile.c_str(), FALSE);
+    }
+    if (!bOk)
+    {
+        return L"";
+    }
+    m_backupAndTempFiles.insert(backupFile);
+
+    return backupFile;
+}
+
+int CSearchDlg::AdoptTempResultFile(CSearchInfo& sInfo, const std::wstring& searchRoot, const std::wstring& tempFilePath)
+{
+    FILETIME creationTime{};
+    FILETIME lastAccessTime{};
+    FILETIME lastWriteTime{};
+    if (m_bKeepFileDate)
+    {
+        HANDLE hFile = CreateFile(sInfo.filePath.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (hFile == INVALID_HANDLE_VALUE)
         {
-            std::wstring fileExt = fileNameFull.substr(dotPos + 1);
-            SearchReplace(localSearchString, L"${fileext}", fileExt);
+            return -1;
+        }
+        bool bOk = GetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
+        CloseHandle(hFile);
+        if (!bOk)
+        {
+            return -1;
         }
     }
-    if (!bUseRegex)
+    DWORD origAttributes = GetFileAttributes(sInfo.filePath.c_str());
+    bool  bIsShr         = (origAttributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM)) != 0;
+    if (bIsShr)
     {
-        using namespace std::string_literals;
-        for (const auto& c : {L"\\"s, L"^"s, L"$"s, L"."s, L"|"s, L"?"s, L"*"s, L"+"s, L"("s, L")"s, L"["s, L"{"s})
+        SetFileAttributes(sInfo.filePath.c_str(), 0);
+    }
+    if (m_bCreateBackup && !sInfo.hasBackedup)
+    {
+        if (BackupFile(searchRoot, sInfo.filePath, true).empty())
         {
-            SearchReplace(localSearchString, c, L"\\" + c);
+            return -1;
         }
-        if (m_bWholeWords)
-            localSearchString = L"\\b" + localSearchString + L"\\b";
+        sInfo.hasBackedup = true;
+    }
+    if (!MoveFileEx(tempFilePath.c_str(), sInfo.filePath.c_str(), MOVEFILE_REPLACE_EXISTING))
+    {
+        return -1;
+    }
+    if (m_bKeepFileDate)
+    {
+        int countDown = 5;
+        do
+        {
+            HANDLE hFile = CreateFile(sInfo.filePath.c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+            bool   bOk   = hFile != INVALID_HANDLE_VALUE;
+            if (bOk)
+            {
+                // The NTFS file system delays updates to the last access time for a file by up to 1 hour after the last access.
+                bOk = SetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
+                CloseHandle(hFile);
+            }
+            if (bOk)
+            {
+                break;
+            }
+            else
+            {
+                Sleep(50);
+            }
+            --countDown;
+        } while (countDown > 0);
+        // if (countDown <= 0), main change has been made, still return succeeded.
+    }
+    if (bIsShr)
+    {
+        SetFileAttributes(sInfo.filePath.c_str(), origAttributes);
     }
 
+    return 1;
+}
+
+int CSearchDlg::SearchOnTextFile(CSearchInfo& sInfo, const std::wstring& searchRoot, const std::wstring& searchExpression, const std::wstring& replaceExpression, UINT syntaxFlags, UINT matchFlags, CTextFile& textFile)
+{
+    int          nFound = 0;
+
+    std::wstring expr   = searchExpression;
+    if (!m_bUseRegex && m_bWholeWords)
+    {
+        expr = L"\\b" + expr + L"\\b";
+    }
+
+    std::wstring::const_iterator start, end;
+    start = textFile.GetFileString().begin();
+    end   = textFile.GetFileString().end();
+    boost::match_results<std::wstring::const_iterator> whatC;
+    boost::wregex                                      wRegEx       = boost::wregex(expr, syntaxFlags);
+    boost::match_flag_type                             mFlags       = static_cast<boost::match_flag_type>(matchFlags);
+
+    size_t                                             count        = textFile.GetFileString().size();
+    size_t                                             remainder    = count % (SEARCHBLOCKSIZE / 2);
+    std::wstring::const_iterator                       startIter    = start;
+    std::wstring::const_iterator                       blockEnd     = start + remainder;
+
+    std::wstring                                       filePathTemp = sInfo.filePath + L".grepwinreplaced";
+    RegexReplaceFormatter<wchar_t>                     replaceFmt(replaceExpression);
+    std::wstring                                       replaced;
+    auto                                               replacedIter = std::back_inserter(replaced);
+    if (m_bReplace) // synchronize Replace and Search for cancellation and reducing repetitive work on huge files
+    {
+        m_backupAndTempFiles.insert(filePathTemp);
+        replaceFmt.SetReplacePair(L"${filepath}", sInfo.filePath);
+        std::wstring fileNameFullW = sInfo.filePath.substr(sInfo.filePath.find_last_of('\\') + 1);
+        auto         dotPosW       = fileNameFullW.find_last_of('.');
+        if (dotPosW != std::string::npos)
+        {
+            std::wstring filename = fileNameFullW.substr(0, dotPosW);
+            replaceFmt.SetReplacePair(L"${filename}", filename);
+            if (fileNameFullW.size() > dotPosW)
+            {
+                std::wstring fileExt = fileNameFullW.substr(dotPosW + 1);
+                replaceFmt.SetReplacePair(L"${fileext}", fileExt);
+            }
+        }
+    }
+    do
+    {
+        while (!m_cancelled && (startIter < blockEnd) && regex_search(startIter, blockEnd, whatC, wRegEx, mFlags, start))
+        {
+            nFound++;
+            if (m_bNotSearch)
+                break;
+            //
+            mFlags |= boost::match_prev_avail;
+            mFlags |= boost::match_not_bob;
+            //
+            long posMatchHead = static_cast<long>(whatC[0].first - textFile.GetFileString().begin());
+            long posMatchTail = static_cast<long>(whatC[0].second - textFile.GetFileString().begin());
+            if (whatC[0].first < whatC[0].second) // m[0].second is not part of the match
+                --posMatchTail;
+            long lineStart = textFile.LineFromPosition(posMatchHead);
+            long lineEnd   = textFile.LineFromPosition(posMatchTail);
+            long colMatch  = textFile.ColumnFromPosition(posMatchHead, lineStart);
+            long lenMatch  = static_cast<long>(whatC[0].length());
+            if (m_bCaptureSearch)
+            {
+                if (!sInfo.matchLinesMap.contains(lineStart))
+                {
+                    auto out                       = whatC.format(m_replaceString, mFlags);
+                    sInfo.matchLinesMap[lineStart] = out;
+                }
+                sInfo.matchLinesNumbers.push_back(lineStart);
+                sInfo.matchColumnsNumbers.push_back(colMatch);
+                sInfo.matchLengths.push_back(static_cast<long>(sInfo.matchLinesMap.at(lineStart).length()));
+            }
+            else
+            {
+                for (long l = lineStart; l <= lineEnd; ++l)
+                {
+                    if (!sInfo.matchLinesMap.contains(l))
+                    {
+                        auto sLine             = textFile.GetLineString(l);
+                        sInfo.matchLinesMap[l] = sLine;
+                    }
+                    const auto& sLine        = sInfo.matchLinesMap.at(l);
+                    long        lenLineMatch = static_cast<long>(sLine.length()) - colMatch + 1;
+                    if (lenMatch < lenLineMatch)
+                        lenLineMatch = lenMatch;
+
+                    sInfo.matchLinesNumbers.push_back(l);
+                    sInfo.matchColumnsNumbers.push_back(colMatch);
+                    sInfo.matchLengths.push_back(lenLineMatch);
+                    if (lenMatch > lenLineMatch)
+                    {
+                        colMatch = 1;
+                        lenMatch -= lenLineMatch;
+                    }
+                }
+            }
+            ++sInfo.matchCount;
+            if (m_bReplace)
+            {
+                std::copy(startIter, whatC[0].first, replacedIter);
+                regex_replace(replacedIter, whatC[0].first, whatC[0].second, wRegEx, replaceFmt, mFlags);
+            }
+            //
+            startIter = whatC[0].second;
+            if (startIter == whatC[0].first) // ^$
+            {
+                if (startIter == blockEnd)
+                    break;
+                if (m_bReplace)
+                    std::copy_n(startIter, 1, replacedIter);
+                ++startIter;
+            }
+        }
+        if (startIter < blockEnd) // not found
+        {
+            if (m_bReplace)
+                std::copy(startIter, blockEnd, replacedIter);
+            startIter = blockEnd;
+        }
+        if (blockEnd < end)
+            blockEnd += SEARCHBLOCKSIZE / 2;
+        else
+            break;
+    } while (!m_cancelled);
+
+    if (!m_bReplace || m_cancelled || nFound == 0)
+    {
+        return nFound;
+    }
+
+    textFile.SetFileContent(replaced);
+    if (!textFile.Save(filePathTemp.c_str(), false))
+    {
+        return -1;
+    }
+
+    if (AdoptTempResultFile(sInfo, searchRoot, filePathTemp) <= 0)
+    {
+        return -1;
+    }
+
+    return nFound;
+}
+
+namespace
+{
+std::wstring utf16Swap(const std::wstring& str)
+{
+    std::wstring swapped = str;
+    for (size_t i = 0; i < swapped.length(); ++i)
+    {
+        swapped[i] = swapped[i] << 8 | (swapped[i] >> 8 & 0xff);
+    }
+    return swapped;
+}
+
+std::wstring ConvertToWstring(const std::string_view& str, CTextFile::UnicodeType encoding)
+{
+    std::wstring strW;
+    switch (encoding)
+    {
+        case CTextFile::Ansi:
+            strW = MultibyteToWide(str, false);
+            break;
+        case CTextFile::UTF8:
+            strW = UTF8ToWide(str, false);
+            break;
+        default:
+        {
+            strW = std::wstring(reinterpret_cast<const wchar_t*>(str.data()), str.length() / 2);
+            if (encoding == CTextFile::Unicode_Be)
+                strW = utf16Swap(strW);
+        }
+        break;
+    }
+    return strW;
+}
+} // namespace
+
+template <typename CharT = char>
+std::basic_string<CharT> ConvertToString(const std::wstring& /*str*/, CTextFile::UnicodeType /*encoding*/, CharT* /*dummy*/ = nullptr)
+{
+    return {};
+};
+
+template <>
+std::basic_string<char> ConvertToString<char>(const std::wstring& str, CTextFile::UnicodeType encoding, char*)
+{
+    switch (encoding)
+    {
+        case CTextFile::Unicode_Le:
+            return std::basic_string<char>(reinterpret_cast<const char*>(str.c_str()), 2 * str.length());
+        case CTextFile::Unicode_Be:
+        {
+            std::wstring strBe = utf16Swap(str);
+            return std::basic_string<char>(reinterpret_cast<const char*>(strBe.c_str()), 2 * strBe.length());
+        }
+        case CTextFile::Ansi:
+            return CUnicodeUtils::StdGetANSI(str);
+        case CTextFile::UTF8:
+            return CUnicodeUtils::StdGetUTF8(str);
+        default:
+            return "";
+    }
+};
+
+template <>
+std::basic_string<wchar_t> ConvertToString<wchar_t>(const std::wstring& str, CTextFile::UnicodeType encoding, wchar_t*)
+{
+    if (encoding == CTextFile::Unicode_Be)
+        return utf16Swap(str);
+    return str;
+};
+
+template <typename CharT>
+int CSearchDlg::SearchByFilePath(CSearchInfo& sInfo, const std::wstring& searchRoot, const std::wstring& searchExpression, const std::wstring& replaceExpression, UINT syntaxFlags, UINT matchFlags, bool misaligned, CharT*)
+{
+    boost::iostreams::mapped_file_source inFile(boost::filesystem::path(sInfo.filePath));
+    if (!inFile.is_open())
+        return -1;
+
+    const char*       inData   = inFile.data();
+    size_t            inSize   = inFile.size();
+    size_t            skipSize = 0;
+    size_t            workSize = inSize;
+    size_t            dropSize = 0;
+    const CharT*      fBeg     = reinterpret_cast<const CharT*>(inData);
+    const CharT*      start    = fBeg;
+    const CharT*      end      = fBeg + inSize / sizeof(CharT);
+
+    TextOffset<CharT> textOffset;
+    start    = fBeg;
+
+    skipSize = reinterpret_cast<const char*>(start) - inData;
+    workSize = inSize - skipSize;
+    if (sizeof(CharT) > 1)
+    {
+        if (misaligned && skipSize < inSize)
+        {
+            ++skipSize;
+            --workSize;
+            const char* p = reinterpret_cast<const char*>(start);
+            ++p;
+            start = reinterpret_cast<const CharT*>(p);
+        }
+        dropSize = workSize % sizeof(CharT);
+        if (dropSize > 0)
+            workSize -= dropSize;
+    }
+    if (workSize == 0)
+    {
+        inFile.close();
+        return 0;
+    }
+    end                           = reinterpret_cast<const CharT*>(inData + skipSize + workSize);
+
+    std::basic_string<CharT> expr = ConvertToString<CharT>(searchExpression, sInfo.encoding);
+
+    if (!m_bUseRegex && m_bWholeWords)
+    {
+        const CharT boundary[] = {'\\', 'b', 0};
+        expr                   = boundary + expr + boundary;
+    }
+
+    boost::match_results<const CharT*>         whatC;
+    boost::basic_regex<CharT>                  regEx        = boost::basic_regex<CharT>(expr, syntaxFlags);
+    boost::match_flag_type                     mFlags       = static_cast<boost::match_flag_type>(matchFlags);
+
+    size_t                                     count        = workSize / sizeof(CharT);
+    size_t                                     remainder    = count % (SEARCHBLOCKSIZE / sizeof(CharT));
+    const CharT*                               startIter    = start;
+    const CharT*                               blockEnd     = start + remainder;
+
+    int                                        nFound       = 0;
+    std::wstring                               filePathTemp = sInfo.filePath + L".grepwinreplaced";
+    std::basic_filebuf<char>                   outFileBufA;
+    std::basic_string<CharT>                   repl = ConvertToString<CharT>(replaceExpression, sInfo.encoding);
+    RegexReplaceFormatter<CharT, const CharT*> replaceFmt(repl);
+    if (m_bReplace) // synchronize Replace and Search for cancellation and reducing repetitive work on huge files
+    {
+        m_backupAndTempFiles.insert(filePathTemp);
+
+        outFileBufA.open(filePathTemp, std::ios::out | std::ios::trunc | std::ios::binary); // overwrite
+        if (!outFileBufA.is_open())
+        {
+            inFile.close();
+            return -1;
+        }
+        outFileBufA.sputn(inData, skipSize);
+
+        if constexpr (sizeof(CharT) > 1)
+        {
+            replaceFmt.SetReplacePair(L"${filepath}", sInfo.filePath);
+            std::wstring fileNameFullW = sInfo.filePath.substr(sInfo.filePath.find_last_of('\\') + 1);
+            auto         dotPosW       = fileNameFullW.find_last_of('.');
+            if (dotPosW != std::string::npos)
+            {
+                std::wstring filename = fileNameFullW.substr(0, dotPosW);
+                replaceFmt.SetReplacePair(L"${filename}", filename);
+                if (fileNameFullW.size() > dotPosW)
+                {
+                    std::wstring fileExt = fileNameFullW.substr(dotPosW + 1);
+                    replaceFmt.SetReplacePair(L"${fileext}", fileExt);
+                }
+            }
+        }
+        else
+        {
+            std::basic_string<CharT> filePathA = ConvertToString<CharT>(sInfo.filePath, sInfo.encoding);
+            replaceFmt.SetReplacePair("${filepath}", filePathA);
+            std::string fileNameFullA = filePathA.substr(filePathA.find_last_of('\\') + 1);
+            auto        dotPosA       = fileNameFullA.find_last_of('.');
+            if (dotPosA != std::string::npos)
+            {
+                std::string filename = fileNameFullA.substr(0, dotPosA);
+                replaceFmt.SetReplacePair("${filename}", filename);
+                if (fileNameFullA.size() > dotPosA)
+                {
+                    std::string fileExt = fileNameFullA.substr(dotPosA + 1);
+                    replaceFmt.SetReplacePair("${fileext}", fileExt);
+                }
+            }
+        }
+    }
+
+    do
+    {
+        while (!m_cancelled && (startIter < blockEnd) && boost::regex_search(startIter, blockEnd, whatC, regEx, mFlags, start))
+        {
+            nFound++;
+            if (m_bNotSearch)
+                break;
+            //
+            mFlags |= boost::match_prev_avail;
+            mFlags |= boost::match_not_bob;
+            //
+            sInfo.matchLinesNumbers.push_back(static_cast<DWORD>(whatC[0].first - fBeg));
+            sInfo.matchColumnsNumbers.push_back(static_cast<DWORD>(whatC[0].length()));
+            ++sInfo.matchCount;
+            if (m_bReplace)
+            {
+                if constexpr (sizeof(CharT) > 1)
+                {
+                    std::wstring replaced;
+                    auto         replacedIter = std::back_inserter(replaced);
+                    outFileBufA.sputn(reinterpret_cast<const char*>(startIter), (whatC[0].first - startIter) * 2);
+                    regex_replace(replacedIter, whatC[0].first, whatC[0].second, regEx, replaceFmt, mFlags);
+                    outFileBufA.sputn(reinterpret_cast<const char*>(replaced.c_str()), replaced.length() * 2);
+                }
+                else
+                {
+                    std::ostreambuf_iterator<char> outIter(&outFileBufA);
+                    outFileBufA.sputn(startIter, whatC[0].first - startIter);
+                    regex_replace(outIter, whatC[0].first, whatC[0].second, regEx, replaceFmt, mFlags);
+                }
+            }
+            //
+            startIter = whatC[0].second;
+            if (startIter == whatC[0].first) // ^$
+            {
+                if (startIter == blockEnd)
+                    break;
+                if (m_bReplace)
+                {
+                    if constexpr (sizeof(CharT) > 1)
+                        outFileBufA.sputn(reinterpret_cast<const char*>(startIter), 2);
+                    else
+                        outFileBufA.sputc(*startIter);
+                }
+                ++startIter;
+            }
+        }
+        if (startIter < blockEnd) // not found
+        {
+            if (m_bReplace)
+            {
+                if constexpr (sizeof(CharT) > 1)
+                    outFileBufA.sputn(reinterpret_cast<const char*>(startIter), (blockEnd - startIter) * 2);
+                else
+                    outFileBufA.sputn(startIter, blockEnd - startIter);
+            }
+            startIter = blockEnd;
+        }
+        if (blockEnd < end)
+            blockEnd += SEARCHBLOCKSIZE / sizeof(CharT);
+        else
+            break;
+    } while (!m_cancelled);
+
+    bool bAdopt = false;
+    if (m_bReplace)
+    {
+        if (nFound > 0)
+        {
+            bAdopt = true;
+            if (dropSize > 0 && !m_cancelled)
+            {
+                outFileBufA.sputc(inData[inSize - 2]);
+            }
+        }
+        outFileBufA.close(); // reduce memory ASAP for huge files
+        if (!bAdopt)
+        {
+            // if cancelled or failed but found any, keep `filePathTemp` to give some hints
+            DeleteFile(filePathTemp.c_str());
+        }
+    }
+    if (nFound > 0)
+    {
+        if ((sInfo.encoding != CTextFile::Binary) && !m_bNotSearch)
+        {
+            if (blockEnd - start < 4 * SEARCHBLOCKSIZE)
+                textOffset.CalculateLines(start, blockEnd, false);
+            else
+                textOffset.CalculateLines(start, blockEnd, m_cancelled);
+            for (size_t mp = 0; mp < sInfo.matchLinesNumbers.size(); ++mp)
+            {
+                // return the nearest position to give some hints when cancelled
+                auto pos                      = sInfo.matchLinesNumbers[mp];
+                sInfo.matchLinesNumbers[mp]   = textOffset.LineFromPosition(pos);
+                auto lenMatchLength           = sInfo.matchColumnsNumbers[mp];
+                sInfo.matchColumnsNumbers[mp] = textOffset.ColumnFromPosition(pos, sInfo.matchLinesNumbers[mp]);
+                auto linePos                  = textOffset.PositionsFromLine(sInfo.matchLinesNumbers[mp]);
+                auto lineStart                = std::get<0>(linePos);
+                auto lineEnd                  = std::get<1>(linePos);
+                auto lineLength               = lineEnd - lineStart;
+                if (lineLength > 0 && lineLength < 4096) // ignore lines longer than 4kb
+                {
+                    if constexpr (std::is_same_v<CharT, wchar_t>)
+                    {
+                        if (!sInfo.matchLinesMap.contains(pos))
+                        {
+                            auto sLine = std::basic_string<CharT>(static_cast<const CharT*>(start + lineStart), lineLength);
+                            if (sInfo.encoding == CTextFile::Unicode_Be)
+                                sLine = utf16Swap(sLine);
+                            sInfo.matchLinesMap[pos] = sLine;
+                        }
+                        const auto& sLine = sInfo.matchLinesMap[pos];
+                        lenMatchLength    = min(lenMatchLength, static_cast<DWORD>(sLine.length() - sInfo.matchColumnsNumbers[mp]));
+                        sInfo.matchLengths.push_back(lenMatchLength);
+                    }
+                    else
+                    {
+                        auto sLineA    = std::basic_string_view<CharT>(static_cast<const CharT*>(start + lineStart), lineLength);
+                        lenMatchLength = min(lenMatchLength, static_cast<DWORD>(sLineA.length() - sInfo.matchColumnsNumbers[mp]));
+                        if (!sInfo.matchLinesMap.contains(pos))
+                        {
+                            auto sLine               = ConvertToWstring(sLineA, sInfo.encoding);
+                            sInfo.matchLinesMap[pos] = sLine;
+                        }
+                        sInfo.matchLengths.push_back(lenMatchLength);
+                    }
+                }
+                else
+                {
+                    sInfo.matchLinesMap[pos] = L"";
+                    sInfo.matchLengths.push_back(0);
+                }
+            }
+        }
+    }
+
+    inFile.close();
+    if (bAdopt && !m_cancelled)
+    {
+        AdoptTempResultFile(sInfo, searchRoot, filePathTemp);
+    }
+
+    return nFound;
+}
+
+void CSearchDlg::SendResult(const CSearchInfo& sInfo, const int nCount)
+{
+    SendMessage(*this, SEARCH_PROGRESS, (nCount >= 0), 0);
+    bool bAsResult = m_bNotSearch ? (nCount <= 0) : (nCount > 0);
+    if (bAsResult)
+        SendMessage(*this, SEARCH_FOUND, bAsResult, reinterpret_cast<LPARAM>(&sInfo));
+}
+
+void CSearchDlg::SearchFile(CSearchInfo sInfo, const std::wstring& searchRoot)
+{
     CTextFile              textFile;
     CTextFile::UnicodeType type        = CTextFile::AutoType;
     bool                   bLoadResult = false;
@@ -3654,490 +4553,144 @@ void CSearchDlg::SearchFile(CSearchInfo sInfo, const std::wstring& searchRoot, b
     else
     {
         ProfileTimer profile((L"file load and parse: " + sInfo.filePath).c_str());
-        auto         nNullCount = bPortable ? _wtoi(g_iniFile.GetValue(L"settings", L"nullbytes", L"0")) : static_cast<int>(static_cast<DWORD>(CRegStdDWORD(L"Software\\grepWin\\nullbytes", 0)));
+        auto         nNullCount = bPortable ? _wtoi(g_iniFile.GetValue(L"settings", L"nullbytes", L"0"))
+                                            : static_cast<int>(static_cast<DWORD>(CRegStdDWORD(L"Software\\grepWin\\nullbytes", 0)));
         if (nNullCount > 0)
         {
             constexpr __int64 oneMB = 1024 * 1024;
             auto              megs  = sInfo.fileSize / oneMB;
             textFile.SetNullbyteCountForBinary(nNullCount * (static_cast<int>(megs) + 1));
         }
-        bLoadResult = textFile.Load(sInfo.filePath.c_str(), type, m_bUTF8, bCancelled);
+        bLoadResult = textFile.Load(sInfo.filePath.c_str(), type, m_bUTF8, m_cancelled);
     }
+
     sInfo.encoding = type;
-    if ((bLoadResult) && ((type != CTextFile::Binary) || (bIncludeBinary) || bSearchAlways))
+    int nCount     = -1; // >= 0: got results; -1: skipped
+    if (m_cancelled)     // big file
     {
-        sInfo.readError = false;
-        std::wstring::const_iterator start, end;
-        start = textFile.GetFileString().begin();
-        end   = textFile.GetFileString().end();
-        boost::match_results<std::wstring::const_iterator> what;
+        SendResult(sInfo, nCount);
+        return;
+    }
+
+    std::wstring searchExpression  = m_searchString;
+    std::wstring replaceExpression = m_replaceString;
+    if (m_bUseRegex)
+    {
+        replaceGrepWinFilePathVariables(searchExpression, sInfo.filePath);
+        if (m_bReplace)
+        {
+            replaceGrepWinFilePathVariables(replaceExpression, sInfo.filePath);
+        }
+    }
+
+    UINT syntaxFlags = boost::regex::normal;
+    if (!m_bCaseSensitive)
+        syntaxFlags |= boost::regbase::icase;
+    boost::match_flag_type matchFlags = boost::match_default | boost::format_all;
+    if (!m_bDotMatchesNewline)
+        matchFlags |= boost::match_not_dot_newline;
+
+    if (type == CTextFile::AutoType) // reading the file failed
+    {
+        sInfo.readError = true;
+    }
+    else if (bLoadResult && ((type != CTextFile::Binary) || m_bIncludeBinary)) // transcoded
+    {
+        // for unrecognized, only `Binary` returns true and treated as UTF-16LE, the same as app internal
         try
         {
-            int ft = boost::regex::normal;
-            if (!bCaseSensitive)
-                ft |= boost::regbase::icase;
-            boost::wregex                                      expression = boost::wregex(localSearchString, ft);
-            boost::match_results<std::wstring::const_iterator> whatC;
-            boost::match_flag_type                             flags = boost::match_default | boost::format_all;
-            if (!bDotMatchesNewline)
-                flags |= boost::match_not_dot_newline;
-            long prevLineStart = 0;
-            long prevLineEnd   = 0;
-            while (!bCancelled && regex_search(start, end, whatC, expression, flags))
-            {
-                if (whatC[0].matched)
-                {
-                    nFound++;
-                    if (m_bNotSearch)
-                        break;
-                    long lineStart = textFile.LineFromPosition(static_cast<long>(whatC[0].first - textFile.GetFileString().begin()));
-                    long lineEnd   = textFile.LineFromPosition(static_cast<long>(whatC[0].second - textFile.GetFileString().begin()));
-                    if ((lineStart != prevLineStart) || (lineEnd != prevLineEnd))
-                    {
-                        for (long l = lineStart; l <= lineEnd; ++l)
-                        {
-                            auto sLine = textFile.GetLineString(l);
-                            if (m_bCaptureSearch)
-                            {
-                                auto out = whatC.format(m_replaceString, flags);
-                                sInfo.matchLines.push_back(std::move(out));
-                            }
-                            else
-                                sInfo.matchLines.push_back(std::move(sLine));
-                            sInfo.matchLinesNumbers.push_back(l);
-                        }
-                    }
-                    ++sInfo.matchCount;
-                    prevLineStart = lineStart;
-                    prevLineEnd   = lineEnd;
-                }
-                // update search position:
-                if (start == whatC[0].second)
-                {
-                    if (start == end)
-                        break;
-                    ++start;
-                }
-                else
-                    start = whatC[0].second;
-                // update flags:
-                flags |= boost::match_prev_avail;
-                flags |= boost::match_not_bob;
-            }
-            if (type == CTextFile::Binary)
-            {
-                boost::wregex expressionUtf16 = boost::wregex(searchStringUtf16Le, ft);
-                start                         = textFile.GetFileString().begin();
-                end                           = textFile.GetFileString().end();
-
-                while (!bCancelled && regex_search(start, end, whatC, expressionUtf16, flags))
-                {
-                    if (whatC[0].matched)
-                    {
-                        nFound++;
-                        if (m_bNotSearch)
-                            break;
-                        long lineStart = textFile.LineFromPosition(static_cast<long>(whatC[0].first - textFile.GetFileString().begin()));
-                        long lineEnd   = textFile.LineFromPosition(static_cast<long>(whatC[0].second - textFile.GetFileString().begin()));
-                        if (m_bCaptureSearch)
-                        {
-                            auto out = whatC.format(m_replaceString, flags);
-                            sInfo.matchLines.push_back(out);
-                            sInfo.matchLinesNumbers.push_back(lineStart);
-                        }
-                        else
-                        {
-                            if ((lineStart != prevLineStart) || (lineEnd != prevLineEnd))
-                            {
-                                for (long l = lineStart; l <= lineEnd; ++l)
-                                {
-                                    sInfo.matchLines.push_back(textFile.GetLineString(l));
-                                    sInfo.matchLinesNumbers.push_back(l);
-                                }
-                            }
-                        }
-                        ++sInfo.matchCount;
-                        prevLineStart = lineStart;
-                        prevLineEnd   = lineEnd;
-                    }
-                    // update search position:
-                    if (start == whatC[0].second)
-                    {
-                        if (start == end)
-                            break;
-                        ++start;
-                    }
-                    else
-                        start = whatC[0].second;
-                    // update flags:
-                    flags |= boost::match_prev_avail;
-                    flags |= boost::match_not_bob;
-                }
-            }
-            if ((m_bReplace) && (nFound))
-            {
-                flags &= ~boost::match_prev_avail;
-                flags &= ~boost::match_not_bob;
-                RegexReplaceFormatter replaceFmt(m_replaceString);
-                replaceFmt.SetReplacePair(L"${filepath}", sInfo.filePath);
-                std::wstring fileNameFullW = sInfo.filePath.substr(sInfo.filePath.find_last_of('\\') + 1);
-                auto         dotPosW       = fileNameFullW.find_last_of('.');
-                if (dotPosW != std::string::npos)
-                {
-                    std::wstring filename = fileNameFullW.substr(0, dotPosW);
-                    replaceFmt.SetReplacePair(L"${filename}", filename);
-                    if (fileNameFullW.size() > dotPosW)
-                    {
-                        std::wstring fileExt = fileNameFullW.substr(dotPosW + 1);
-                        replaceFmt.SetReplacePair(L"${fileext}", fileExt);
-                    }
-                }
-                std::wstring replaced = regex_replace(textFile.GetFileString(), expression, replaceFmt, flags);
-                if (replaced.compare(textFile.GetFileString()))
-                {
-                    textFile.SetFileContent(replaced);
-                    if (m_bCreateBackup)
-                    {
-                        std::wstring backupFile     = sInfo.filePath + L".bak";
-                        auto         backupInFolder = bPortable
-                                                          ? (_wtoi(g_iniFile.GetValue(L"settings", L"backupinfolder", L"0")) != 0)
-                                                          : (static_cast<DWORD>(m_regBackupInFolder) != 0);
-                        if (backupInFolder)
-                        {
-                            std::wstring backupFolder = searchRoot + L"\\grepWin_backup\\";
-                            backupFolder += sInfo.filePath.substr(searchRoot.size() + 1);
-                            backupFolder = CPathUtils::GetParentDirectory(backupFolder);
-                            CPathUtils::CreateRecursiveDirectory(backupFolder);
-                            backupFile = backupFolder + L"\\" + CPathUtils::GetFileName(sInfo.filePath);
-                        }
-                        CopyFile(sInfo.filePath.c_str(), backupFile.c_str(), FALSE);
-                        m_backupAndTempFiles.insert(backupFile);
-                    }
-                    if (!textFile.Save(sInfo.filePath.c_str(), m_bKeepFileDate))
-                    {
-                        // saving the file failed. Find out why...
-                        DWORD err = GetLastError();
-                        if (err == ERROR_ACCESS_DENIED)
-                        {
-                            // access denied can happen if the file has the
-                            // read-only flag and/or the hidden flag set
-                            // those are not situations where we should fail, so
-                            // we reset those flags and restore them
-                            // again after saving the file
-                            FILETIME creationTime{};
-                            FILETIME lastAccessTime{};
-                            FILETIME lastWriteTime{};
-                            if (m_bKeepFileDate)
-                            {
-                                CAutoFile hFile = CreateFile(sInfo.filePath.c_str(), GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
-                                if (hFile)
-                                {
-                                    GetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
-                                }
-                            }
-
-                            DWORD origAttributes = GetFileAttributes(sInfo.filePath.c_str());
-                            DWORD newAttributes  = origAttributes & (~(FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_SYSTEM));
-                            SetFileAttributes(sInfo.filePath.c_str(), newAttributes);
-                            bool bRet = textFile.Save(sInfo.filePath.c_str(), false);
-                            // restore the attributes
-                            SetFileAttributes(sInfo.filePath.c_str(), origAttributes);
-                            if (m_bKeepFileDate)
-                            {
-                                bool success = false;
-                                int  retries = 5;
-                                while (!success && retries >= 0)
-                                {
-                                    {
-                                        CAutoFile hFile = CreateFile(sInfo.filePath.c_str(), GENERIC_WRITE, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
-                                        if (hFile)
-                                        {
-                                            success = !!SetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
-                                        }
-                                    }
-                                    --retries;
-                                    if (!success)
-                                        Sleep(50);
-                                }
-                                assert(success);
-                            }
-                            if (!bRet)
-                            {
-                                SendMessage(*this, SEARCH_PROGRESS, 0, 0);
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
+            nCount = SearchOnTextFile(sInfo, searchRoot, searchExpression, replaceExpression, syntaxFlags, matchFlags, textFile);
         }
         catch (const std::exception& ex)
         {
             sInfo.exception = CUnicodeUtils::StdGetUnicode(ex.what());
-            SendMessage(*this, SEARCH_FOUND, 0, reinterpret_cast<LPARAM>(&sInfo));
-            SendMessage(*this, SEARCH_PROGRESS, 1, 0);
+            nCount          = 1;
         }
     }
-    else
+    else if ((type != CTextFile::Binary) || m_bIncludeBinary || m_bForceBinary)
     {
-        if (type == CTextFile::AutoType)
-        {
-            sInfo.readError = true;
-            SendMessage(*this, SEARCH_FOUND, 0, reinterpret_cast<LPARAM>(&sInfo));
-            SendMessage(*this, SEARCH_PROGRESS, 1, 0);
-            return;
-        }
-
         // file is either too big or binary.
-        // in any case, use the search function that uses a file iterator
-        // instead of a string iterator to reduce the memory consumption
-
-        if ((type != CTextFile::Binary) || bIncludeBinary || bSearchAlways || m_bForceBinary)
+        // types: Ansi, UTF8, Unicode_Le, Unicode_Be and Binary
+        std::vector<CTextFile::UnicodeType> encodingTries;
+        if (!m_bUseRegex || type == CTextFile::Binary)
         {
-            sInfo.encoding        = type;
-            std::string filePath  = CUnicodeUtils::StdGetANSI(sInfo.filePath);
-            std::string searchFor = (type == CTextFile::Ansi) ? CUnicodeUtils::StdGetANSI(searchString) : CUnicodeUtils::StdGetUTF8(searchString);
-
-            if (!bUseRegex)
+            // Treating a multibyte char as single byte chars:
+            //  yields part of it may be matched as a standalone char,
+            //  so requires it grouped for repeats to get accurate results.
+            //  Unicode_Le and Unicode_Be in Regex mode are turned into wchar_t branch. UTF8 is still here.
+            // Without transcoding the file, transcoding the input to other encoding is a trick, to get a bit more outcome.
+            // It only works for raw data, not escaped sequence, that is pure ASCII char!
+            switch (type)
             {
-                searchFor = "\\Q";
-                searchFor += CUnicodeUtils::StdGetUTF8(searchString);
-                searchFor += "\\E";
-            }
-
-            boost::match_results<std::string::const_iterator> what;
-            boost::match_flag_type                            flags = boost::match_default | boost::format_all;
-            if (!bDotMatchesNewline)
-                flags |= boost::match_not_dot_newline;
-            int ft = boost::regex::normal;
-            if (!bCaseSensitive)
-                ft |= boost::regbase::icase;
-
-            try
-            {
-                boost::regex       expression = boost::regex(searchFor, ft);
-                std::vector<DWORD> matchLinesNumbers;
-                bool               bFound = false;
+                case CTextFile::Binary:
                 {
-                    boost::spirit::classic::file_iterator<>                       start(filePath.c_str());
-                    boost::spirit::classic::file_iterator<>                       fBeg = start;
-                    boost::spirit::classic::file_iterator<>                       end  = start.make_end();
-                    boost::match_results<boost::spirit::classic::file_iterator<>> whatC;
-                    while (boost::regex_search(start, end, whatC, expression, flags) && !bCancelled)
-                    {
-                        nFound++;
-                        if (m_bNotSearch)
-                            break;
-                        matchLinesNumbers.push_back(static_cast<DWORD>(whatC[0].first - fBeg));
-                        ++sInfo.matchCount;
-                        // update search position:
-                        start = whatC[0].second;
-                        // update flags:
-                        flags |= boost::match_prev_avail;
-                        flags |= boost::match_not_bob;
-                        bFound = true;
-                        if (bCancelled)
-                            break;
-                    }
+                    if (m_bUseRegex)
+                        encodingTries = {CTextFile::Ansi, CTextFile::UTF8};
+                    else
+                        encodingTries = {CTextFile::Ansi, CTextFile::UTF8, CTextFile::Unicode_Le, CTextFile::Unicode_Be};
                 }
-                if (type == CTextFile::Binary && !m_bReplace)
-                {
-                    boost::wregex                                                        expressionUtf16Le = boost::wregex(searchString, ft);
-                    boost::spirit::classic::file_iterator<wchar_t>                       start(filePath.c_str());
-                    boost::spirit::classic::file_iterator<wchar_t>                       fBeg = start;
-                    boost::spirit::classic::file_iterator<wchar_t>                       end  = start.make_end();
-                    boost::match_results<boost::spirit::classic::file_iterator<wchar_t>> whatC;
-                    while (boost::regex_search(start, end, whatC, expressionUtf16Le, flags))
-                    {
-                        nFound++;
-                        if (m_bNotSearch)
-                            break;
-                        matchLinesNumbers.push_back(static_cast<DWORD>(whatC[0].first - fBeg));
-                        ++sInfo.matchCount;
-                        // update search position:
-                        start = whatC[0].second;
-                        // update flags:
-                        flags |= boost::match_prev_avail;
-                        flags |= boost::match_not_bob;
-                        bFound = true;
-                        if (bCancelled)
-                            break;
-                    }
-                }
-
-                if (bFound && !bCancelled)
-                {
-                    if (!bLoadResult && (type != CTextFile::Binary) && !m_bNotSearch)
-                    {
-                        linePositions.clear();
-                        // open the file and set up a vector of all lines
-                        CAutoFile hFile;
-                        int       retryCounter = 0;
-                        do
-                        {
-                            if (retryCounter)
-                                Sleep(20 + retryCounter * 50);
-                            hFile = CreateFile(sInfo.filePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                               nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-                            retryCounter++;
-                        } while (!hFile && retryCounter < 5);
-                        if (hFile)
-                        {
-                            auto   fBuf      = std::make_unique<char[]>(4096);
-                            DWORD  bytesRead = 0;
-                            size_t pos       = 0;
-                            while (ReadFile(hFile, fBuf.get(), 4096, &bytesRead, nullptr))
-                            {
-                                if (bytesRead == 0)
-                                    break;
-                                for (DWORD br = 0; br < bytesRead; ++br)
-                                {
-                                    if (fBuf[br] == '\r')
-                                    {
-                                        ++br;
-                                        ++pos;
-                                        if (br < bytesRead)
-                                        {
-                                            if (fBuf[br] == '\n')
-                                            {
-                                                // crlf lineending
-                                                auto lp            = linePositions.size();
-                                                linePositions[pos] = static_cast<DWORD>(lp);
-                                            }
-                                            else
-                                            {
-                                                // cr lineending
-                                                auto lp                = linePositions.size();
-                                                linePositions[pos - 1] = static_cast<DWORD>(lp);
-                                            }
-                                        }
-                                        else
-                                            break;
-                                    }
-                                    else if (fBuf[br] == '\n')
-                                    {
-                                        // lf lineending
-                                        auto lp            = linePositions.size();
-                                        linePositions[pos] = static_cast<DWORD>(lp);
-                                    }
-                                    ++pos;
-                                }
-                            }
-                            for (size_t mp = 0; mp < matchLinesNumbers.size(); ++mp)
-                            {
-                                auto fp = linePositions.lower_bound(matchLinesNumbers[mp]);
-                                if (fp != linePositions.end())
-                                    matchLinesNumbers[mp] = fp->second;
-                            }
-                        }
-                    }
-                    sInfo.matchLinesNumbers = matchLinesNumbers;
-
-                    if (m_bReplace)
-                    {
-                        std::wstring backupFile = sInfo.filePath + L".bak";
-                        if (m_bCreateBackup)
-                        {
-                            if (static_cast<DWORD>(m_regBackupInFolder))
-                            {
-                                std::wstring backupFolder = searchRoot + L"\\grepWin_backup\\";
-                                backupFolder += sInfo.filePath.substr(searchRoot.size() + 1);
-                                backupFolder = CPathUtils::GetParentDirectory(backupFolder);
-                                CPathUtils::CreateRecursiveDirectory(backupFolder);
-                                backupFile = backupFolder + L"\\" + CPathUtils::GetFileName(sInfo.filePath);
-                            }
-                            CopyFile(sInfo.filePath.c_str(), backupFile.c_str(), FALSE);
-                            m_backupAndTempFiles.insert(backupFile);
-                        }
-
-                        flags &= ~boost::match_prev_avail;
-                        flags &= ~boost::match_not_bob;
-                        RegexReplaceFormatterA replaceFmt(CUnicodeUtils::StdGetUTF8(m_replaceString));
-                        replaceFmt.SetReplacePair("${filepath}", CUnicodeUtils::StdGetUTF8(sInfo.filePath));
-                        std::string fileNameFullA = CUnicodeUtils::StdGetUTF8(sInfo.filePath.substr(sInfo.filePath.find_last_of('\\') + 1));
-                        auto        dotPosA       = fileNameFullA.find_last_of('.');
-                        if (dotPosA != std::string::npos)
-                        {
-                            std::string filename = fileNameFullA.substr(0, dotPosA);
-                            replaceFmt.SetReplacePair("${filename}", filename);
-                            if (fileNameFull.size() > dotPosA)
-                            {
-                                std::string fileExt = fileNameFullA.substr(dotPosA + 1);
-                                replaceFmt.SetReplacePair("${fileext}", fileExt);
-                            }
-                        }
-
-                        FILETIME creationTime{};
-                        FILETIME lastAccessTime{};
-                        FILETIME lastWriteTime{};
-                        if (m_bKeepFileDate)
-                        {
-                            CAutoFile hFile = CreateFile(sInfo.filePath.c_str(), GENERIC_READ, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
-                            if (hFile)
-                            {
-                                GetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
-                            }
-                            else
-                                assert(false);
-                        }
-
-                        std::string filePathOut = m_bCreateBackup ? filePath : filePath + ".grepwinreplaced";
-                        if (!m_bCreateBackup)
-                            m_backupAndTempFiles.insert(sInfo.filePath + L".grepwinreplaced");
-                        boost::iostreams::mapped_file_source replaceInFile(m_bCreateBackup ? CUnicodeUtils::StdGetANSI(backupFile).c_str() : filePath.c_str());
-                        std::ofstream                        os(filePathOut.c_str(), std::ios::out | std::ios::trunc | std::ios::binary);
-                        std::ostream_iterator<char, char>    out(os);
-                        regex_replace(out, replaceInFile.begin(), replaceInFile.end(), expression, replaceFmt, flags);
-                        os.close();
-                        replaceInFile.close();
-                        if (!m_bCreateBackup)
-                            MoveFileExA(filePathOut.c_str(), filePath.c_str(), MOVEFILE_REPLACE_EXISTING);
-                        if (m_bKeepFileDate)
-                        {
-                            bool success = false;
-                            int  retries = 5;
-                            while (!success && retries >= 0)
-                            {
-                                {
-                                    CAutoFile hFile = CreateFile(sInfo.filePath.c_str(), GENERIC_WRITE, FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
-                                    if (hFile)
-                                    {
-                                        success = !!SetFileTime(hFile, &creationTime, &lastAccessTime, &lastWriteTime);
-                                    }
-                                }
-                                --retries;
-                                if (!success)
-                                    Sleep(50);
-                            }
-                            assert(success);
-                        }
-                    }
-                }
+                break;
+                case CTextFile::Ansi:
+                case CTextFile::UTF8:
+                case CTextFile::Unicode_Le:
+                case CTextFile::Unicode_Be:
+                default:
+                    encodingTries = {type};
+                    break;
             }
-            catch (const std::exception& ex)
+            for (auto assumption : encodingTries)
             {
-                sInfo.exception = CUnicodeUtils::StdGetUnicode(ex.what());
-                SendMessage(*this, SEARCH_FOUND, 0, reinterpret_cast<LPARAM>(&sInfo));
-                SendMessage(*this, SEARCH_PROGRESS, 1, 0);
-            }
-            catch (...)
-            {
-                SendMessage(*this, SEARCH_PROGRESS, 0, 0);
-                return;
+                sInfo.encoding = assumption;
+                try
+                {
+                    nCount = SearchByFilePath<char>(sInfo, searchRoot, searchExpression, replaceExpression, syntaxFlags, matchFlags, false);
+                }
+                catch (...)
+                {
+                    // regex error
+                }
+                if (nCount > 0)
+                {
+                    break; // try all is consuming
+                }
             }
         }
-    }
-    if (m_bNotSearch)
-    {
-        if (nFound == 0)
-            SendMessage(*this, SEARCH_FOUND, nFound, reinterpret_cast<LPARAM>(&sInfo));
-        SendMessage(*this, SEARCH_PROGRESS, (nFound >= 0), 0);
-        return;
+        if (m_bUseRegex && nCount <= 0 && (type == CTextFile::Unicode_Le || type == CTextFile::Unicode_Be || type == CTextFile::Binary))
+        {
+            switch (type)
+            {
+                case CTextFile::Binary:
+                    encodingTries = {CTextFile::Unicode_Le, CTextFile::Unicode_Be};
+                    break;
+                case CTextFile::Unicode_Le:
+                case CTextFile::Unicode_Be:
+                default:
+                    encodingTries = {type};
+                    break;
+            }
+            for (auto assumption : encodingTries)
+            {
+                sInfo.encoding = assumption;
+                try
+                {
+                    nCount += SearchByFilePath<wchar_t>(sInfo, searchRoot, searchExpression, replaceExpression, syntaxFlags, matchFlags, false);
+                    if (type == CTextFile::Binary)
+                        nCount += SearchByFilePath<wchar_t>(sInfo, searchRoot, searchExpression, replaceExpression, syntaxFlags, matchFlags, true);
+                }
+                catch (...)
+                {
+                    // regex error
+                }
+                if (nCount > 0)
+                {
+                    break; // try all is consuming
+                }
+            }
+        }
+        // sInfo.encoding = type; // show the matched encoding
     }
 
-    if (nFound >= 0)
-        SendMessage(*this, SEARCH_FOUND, nFound, reinterpret_cast<LPARAM>(&sInfo));
-    SendMessage(*this, SEARCH_PROGRESS, (nFound >= 0), 0);
+    SendResult(sInfo, nCount);
 }
 
 DWORD WINAPI SearchThreadEntry(LPVOID lpParam)
@@ -4148,7 +4701,7 @@ DWORD WINAPI SearchThreadEntry(LPVOID lpParam)
     return 0L;
 }
 
-void CSearchDlg::formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool forceShortFmt) const
+void CSearchDlg::formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool forceShortFmt)
 {
     dateNative[0] = '\0';
 
@@ -4163,8 +4716,8 @@ void CSearchDlg::formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool
     SYSTEMTIME localSystime;
     SystemTimeToTzSpecificLocalTime(&timeZone, &systemTime, &localSystime);
 
-    wchar_t timeBuf[GREPWIN_DATEBUFFER] = {0};
-    wchar_t dateBuf[GREPWIN_DATEBUFFER] = {0};
+    wchar_t timeBuf[GREPWIN_DATEBUFFER] = {};
+    wchar_t dateBuf[GREPWIN_DATEBUFFER] = {};
 
     LCID    locale                      = MAKELCID(MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), SORT_DEFAULT);
 
@@ -4179,124 +4732,19 @@ void CSearchDlg::formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool
     wcsncat_s(dateNative, GREPWIN_DATEBUFFER, timeBuf, GREPWIN_DATEBUFFER);
 }
 
-int CSearchDlg::CheckRegex()
-{
-    m_isRegexValid                 = true;
-    m_isExcludeDirsRegexValid      = true;
-    m_isFileNameMatchingRegexValid = true;
-
-    auto buf                       = GetDlgItemText(IDC_SEARCHTEXT);
-    int  len                       = static_cast<int>(wcslen(buf.get()));
-    if (IsDlgButtonChecked(*this, IDC_REGEXRADIO) == BST_CHECKED)
-    {
-        // check if the regex is valid
-        bool bValid = true;
-        if (len)
-        {
-            try
-            {
-                std::wstring localSearchString = buf.get();
-                SearchReplace(localSearchString, L"${filepath}", L"");
-                SearchReplace(localSearchString, L"${filepath}", L"");
-                SearchReplace(localSearchString, L"${fileext}", L"");
-
-                boost::wregex expression = boost::wregex(localSearchString);
-            }
-            catch (const std::exception&)
-            {
-                bValid         = false;
-                m_isRegexValid = false;
-            }
-        }
-        if (len)
-        {
-            if (bValid)
-            {
-                SetDlgItemText(*this, IDC_REGEXOKLABEL, TranslatedString(hResource, IDS_REGEXOK).c_str());
-                DialogEnableWindow(IDOK, true);
-                DialogEnableWindow(IDC_REPLACE, true);
-                DialogEnableWindow(IDC_CREATEBACKUP, true);
-                RedrawWindow(GetDlgItem(*this, IDC_SEARCHTEXT), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
-            }
-            else
-            {
-                SetDlgItemText(*this, IDC_REGEXOKLABEL, TranslatedString(hResource, IDS_REGEXINVALID).c_str());
-                DialogEnableWindow(IDOK, false);
-                DialogEnableWindow(IDC_REPLACE, false);
-                DialogEnableWindow(IDC_CREATEBACKUP, false);
-                RedrawWindow(GetDlgItem(*this, IDC_SEARCHTEXT), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
-            }
-        }
-        else
-        {
-            SetDlgItemText(*this, IDC_REGEXOKLABEL, L"");
-            DialogEnableWindow(IDOK, true);
-            DialogEnableWindow(IDC_REPLACE, false);
-            DialogEnableWindow(IDC_CREATEBACKUP, false);
-            RedrawWindow(GetDlgItem(*this, IDC_SEARCHTEXT), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
-        }
-    }
-    else
-    {
-        SetDlgItemText(*this, IDC_REGEXOKLABEL, L"");
-        DialogEnableWindow(IDOK, true);
-        DialogEnableWindow(IDC_REPLACE, len > 0);
-        DialogEnableWindow(IDC_CREATEBACKUP, len > 0);
-        RedrawWindow(GetDlgItem(*this, IDC_SEARCHTEXT), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
-    }
-
-    {
-        buf = GetDlgItemText(IDC_EXCLUDEDIRSPATTERN);
-        len = static_cast<int>(wcslen(buf.get()));
-        if (len)
-        {
-            try
-            {
-                std::wstring  sRegex     = buf.get();
-                boost::wregex expression = boost::wregex(sRegex);
-            }
-            catch (const std::exception&)
-            {
-                m_isExcludeDirsRegexValid = false;
-            }
-        }
-        RedrawWindow(GetDlgItem(*this, IDC_EXCLUDEDIRSPATTERN), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
-    }
-    if (IsDlgButtonChecked(*this, IDC_FILEPATTERNREGEX) == BST_CHECKED)
-    {
-        buf = GetDlgItemText(IDC_PATTERN);
-        len = static_cast<int>(wcslen(buf.get()));
-        if (len)
-        {
-            try
-            {
-                std::wstring  sRegex     = buf.get();
-                boost::wregex expression = boost::wregex(sRegex);
-            }
-            catch (const std::exception&)
-            {
-                m_isFileNameMatchingRegexValid = false;
-            }
-        }
-    }
-    RedrawWindow(GetDlgItem(*this, IDC_PATTERN), nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE);
-
-    return len;
-}
-
 void CSearchDlg::AutoSizeAllColumns()
 {
-    HWND             hListControl          = GetDlgItem(*this, IDC_RESULTLIST);
-    auto             headerCtrl            = ListView_GetHeader(hListControl);
-    int              nItemCount            = ListView_GetItemCount(hListControl);
-    wchar_t          textBuf[MAX_PATH * 4] = {0};
+    HWND             hListControl      = GetDlgItem(*this, IDC_RESULTLIST);
+    auto             headerCtrl        = ListView_GetHeader(hListControl);
+    int              nItemCount        = ListView_GetItemCount(hListControl);
+    wchar_t          textBuf[MAX_PATH] = {};
     std::vector<int> colWidths;
     if (headerCtrl)
     {
         int  maxCol   = Header_GetItemCount(headerCtrl) - 1;
         int  imgWidth = 0;
         auto hImgList = ListView_GetImageList(hListControl, LVSIL_SMALL);
-        if ((hImgList) && (ImageList_GetImageCount(hImgList)))
+        if (hImgList && ImageList_GetImageCount(hImgList))
         {
             IMAGEINFO imgInfo;
             ImageList_GetImageInfo(hImgList, 0, &imgInfo);
@@ -4304,7 +4752,7 @@ void CSearchDlg::AutoSizeAllColumns()
         }
         for (int col = 0; col <= maxCol; col++)
         {
-            HDITEM hdi     = {0};
+            HDITEM hdi     = {};
             hdi.mask       = HDI_TEXT;
             hdi.pszText    = textBuf;
             hdi.cchTextMax = _countof(textBuf);
@@ -4331,8 +4779,16 @@ void CSearchDlg::AutoSizeAllColumns()
     {
         RECT rc{};
         ListView_GetItemRect(hListControl, 0, &rc, LVIR_BOUNDS);
-        auto itemWidth = rc.right - rc.left;
-        ListView_GetItemRect(hListControl, 0, &rc, LVIR_ICON);
+        int  cxVScroll = GetSystemMetrics(SM_CXVSCROLL);
+        auto itemWidth = rc.right - rc.left - cxVScroll;
+        if (nItemCount > 0)
+        {
+            GetClientRect(hListControl, &rc);
+            if (itemWidth < rc.right - rc.left)
+            {
+                itemWidth = rc.right - rc.left;
+            }
+        }
         auto totalWidth = std::accumulate(colWidths.begin(), colWidths.end(), 0);
         totalWidth -= colWidths[colWidths.size() - 2];
         auto textWidth = itemWidth - totalWidth;
@@ -4482,7 +4938,7 @@ void CSearchDlg::ShowUpdateAvailable()
     }
 }
 
-bool CSearchDlg::IsVersionNewer(const std::wstring& sVer) const
+bool CSearchDlg::IsVersionNewer(const std::wstring& sVer)
 {
     int            major = 0;
     int            minor = 0;
@@ -4541,7 +4997,7 @@ bool CSearchDlg::CloneWindow()
     arguments += L" /new";
     auto             file = CPathUtils::GetModulePath();
 
-    SHELLEXECUTEINFO sei  = {0};
+    SHELLEXECUTEINFO sei  = {};
     sei.cbSize            = sizeof(SHELLEXECUTEINFO);
     sei.lpVerb            = TEXT("open");
     sei.lpFile            = file.c_str();
@@ -4549,53 +5005,4 @@ bool CSearchDlg::CloneWindow()
     sei.nShow             = SW_SHOWNORMAL;
     ShellExecuteEx(&sei);
     return true;
-}
-
-std::wstring CSearchDlg::ExpandString(const std::wstring& replaceString) const
-{
-    // ${now,formatString}
-    wchar_t buf[4096] = {};
-    GetDateFormat(LOCALE_USER_DEFAULT, DATE_SHORTDATE, nullptr, nullptr, buf, _countof(buf));
-    std::wstring dateStr = buf;
-    GetTimeFormat(LOCALE_USER_DEFAULT, 0, nullptr, nullptr, buf, _countof(buf));
-    dateStr += L" - ";
-    dateStr += buf;
-    std::time_t                                        now        = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    int                                                ft         = boost::regex::normal;
-    boost::wregex                                      expression = boost::wregex(L"\\$\\{now\\s*,?([^}]*)\\}", ft);
-    boost::match_results<std::wstring::const_iterator> whatC;
-    boost::match_flag_type                             flags        = boost::match_default | boost::format_all;
-    auto                                               resultString = replaceString;
-    try
-    {
-        while (regex_search(resultString.cbegin(), resultString.cend(), whatC, expression, flags))
-        {
-            if (whatC[0].matched)
-            {
-                auto         fullMatch = whatC.str();
-
-                std::wstring formatStr;
-                if (whatC.size() > 1)
-                {
-                    formatStr = whatC[1].str();
-                    if (!formatStr.empty())
-                    {
-                        std::wstring formattedDateStr(4096, '\0');
-                        struct tm    locTime;
-                        _localtime64_s(&locTime, &now);
-                        std::wcsftime(&formattedDateStr[0], formattedDateStr.size(), formatStr.c_str(), &locTime);
-                        SearchReplace(resultString, fullMatch, formattedDateStr);
-                    }
-                }
-                else
-                {
-                    SearchReplace(resultString, fullMatch, dateStr);
-                }
-            }
-        }
-    }
-    catch (const std::exception&)
-    {
-    }
-    return resultString;
 }

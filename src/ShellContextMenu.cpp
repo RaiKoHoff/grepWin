@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2015, 2017, 2020-2021, 2023 - Stefan Kueng
+// Copyright (C) 2007-2015, 2017, 2020-2021, 2023-2024 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -56,7 +56,6 @@ CShellContextMenu::CShellContextMenu()
 CShellContextMenu::~CShellContextMenu()
 {
     // free all allocated data
-    delete m_pFolderHook;
     if (m_psfFolder && bDelete)
         m_psfFolder->Release();
     m_psfFolder = nullptr;
@@ -80,9 +79,8 @@ BOOL CShellContextMenu::GetContextMenu(HWND hWnd, void** ppContextMenu, int& iMe
     if (m_strVector.empty())
         return FALSE;
 
-    HKEY ahkeys[16];
-    SecureZeroMemory(ahkeys, _countof(ahkeys) * sizeof(HKEY));
-    int numkeys = 0;
+    HKEY ahkeys[16]{};
+    int  numkeys = 0;
     if (RegOpenKey(HKEY_CLASSES_ROOT, L"*", &ahkeys[numkeys++]) != ERROR_SUCCESS)
         numkeys--;
     if (RegOpenKey(HKEY_CLASSES_ROOT, L"AllFileSystemObjects", &ahkeys[numkeys++]) != ERROR_SUCCESS)
@@ -102,8 +100,8 @@ BOOL CShellContextMenu::GetContextMenu(HWND hWnd, void** ppContextMenu, int& iMe
         ext = m_strVector[0].filePath.substr(dotPos);
         if (RegOpenKey(HKEY_CLASSES_ROOT, ext.c_str(), &ahkeys[numkeys++]) == ERROR_SUCCESS)
         {
-            WCHAR buf[MAX_PATH] = {0};
-            DWORD dwSize        = MAX_PATH;
+            WCHAR buf[MAX_PATH]{};
+            DWORD dwSize = MAX_PATH;
             if (RegQueryValueEx(ahkeys[numkeys - 1], L"", nullptr, nullptr, reinterpret_cast<LPBYTE>(buf), &dwSize) == ERROR_SUCCESS)
             {
                 if (RegOpenKey(HKEY_CLASSES_ROOT, buf, &ahkeys[numkeys++]) != ERROR_SUCCESS)
@@ -112,12 +110,15 @@ BOOL CShellContextMenu::GetContextMenu(HWND hWnd, void** ppContextMenu, int& iMe
         }
     }
 
-    delete m_pFolderHook;
-    m_pFolderHook      = new CIShellFolderHook(m_psfFolder, this);
+    m_pFolderHook      = std::make_unique<CIShellFolderHook>(m_psfFolder, this);
 
     LPCONTEXTMENU icm1 = nullptr;
-    if (FAILED(CDefFolderMenu_Create2(NULL, hWnd, static_cast<UINT>(m_pidlArrayItems), const_cast<LPCITEMIDLIST*>(m_pidlArray), m_pFolderHook, dfmCallback, numkeys, ahkeys, &icm1)))
+    if (FAILED(CDefFolderMenu_Create2(NULL, hWnd, static_cast<UINT>(m_pidlArrayItems), const_cast<LPCITEMIDLIST*>(m_pidlArray), m_pFolderHook.get(), dfmCallback, numkeys, ahkeys, &icm1)))
+    {
+        for (int i = 0; i < numkeys; ++i)
+            RegCloseKey(ahkeys[i]);
         return FALSE;
+    }
     for (int i = 0; i < numkeys; ++i)
         RegCloseKey(ahkeys[i]);
 
@@ -129,7 +130,7 @@ BOOL CShellContextMenu::GetContextMenu(HWND hWnd, void** ppContextMenu, int& iMe
             iMenuType = 2;
 
         if (*ppContextMenu)
-            icm1->Release(); // we can now release version 1 interface, cause we got a higher one
+            icm1->Release(); // we can now release version 1 interface, because we got a higher one
         else
         {
             // since no higher versions were found
@@ -286,11 +287,11 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
             case 2:
             {
                 std::wstring pathNames;
-                for (auto it = m_strVector.begin(); it != m_strVector.end(); ++it)
+                for (const auto& info : m_strVector)
                 {
                     if (!pathNames.empty())
                         pathNames += L"\r\n";
-                    pathNames += it->filePath;
+                    pathNames += info.filePath;
                 }
                 WriteAsciiStringToClipboard(pathNames.c_str(), hWnd);
             }
@@ -298,11 +299,11 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
             case 3:
             {
                 std::wstring pathNames;
-                for (auto it = m_strVector.begin(); it != m_strVector.end(); ++it)
+                for (const auto& info : m_strVector)
                 {
                     if (!pathNames.empty())
                         pathNames += L"\r\n";
-                    std::wstring p = it->filePath;
+                    std::wstring p = info.filePath;
                     p              = p.substr(p.find_last_of('\\') + 1);
                     pathNames += p;
                 }
@@ -312,14 +313,14 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
             case 4:
             {
                 std::wstring lines;
-                for (auto it = m_lineVector.begin(); it != m_lineVector.end(); ++it)
+                for (const auto& lineData : m_lineVector)
                 {
-                    for (auto it2 = it->lines.cbegin(); it2 != it->lines.cend(); ++it2)
+                    for (const auto& line : lineData.lines)
                     {
-                        std::wstring l = it2->text;
+                        std::wstring l = line.text;
                         CStringUtils::trim(l, L"\r\n");
-                        std::replace(l.begin(), l.end(), '\n', ' ');
-                        std::replace(l.begin(), l.end(), '\r', ' ');
+                        std::ranges::replace(l, '\n', ' ');
+                        std::ranges::replace(l, '\r', ' ');
 
                         if (!lines.empty())
                             lines += L"\r\n";
@@ -333,15 +334,16 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
             {
                 if (!m_lineVector.empty())
                 {
-                    for (auto it = m_lineVector.cbegin(); it != m_lineVector.cend(); ++it)
+                    for (const auto& lineData : m_lineVector)
                     {
-                        for (auto it2 = it->lines.cbegin(); it2 != it->lines.cend(); ++it2)
+                        for (const auto& line : lineData.lines)
                         {
                             std::wstring cmd = editorCmd;
-                            SearchReplace(cmd, L"%path%", it->path.c_str());
-                            wchar_t buf[40] = {0};
-                            swprintf_s(buf, L"%ld", it2->number);
-                            SearchReplace(cmd, L"%line%", buf);
+                            SearchReplace(cmd, L"%path%", lineData.path.c_str());
+                            auto number = std::to_wstring(line.number);
+                            auto column = std::to_wstring(line.column);
+                            SearchReplace(cmd, L"%line%", number);
+                            SearchReplace(cmd, L"%column%", column);
 
                             STARTUPINFO         startupInfo;
                             PROCESS_INFORMATION processInfo;
@@ -356,18 +358,22 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
                 }
                 else
                 {
-                    for (auto it = m_strVector.begin(); it != m_strVector.end(); ++it)
+                    for (const auto& strData : m_strVector)
                     {
                         std::wstring cmd = editorCmd;
-                        SearchReplace(cmd, L"%path%", it->filePath.c_str());
-                        if (!it->matchLinesNumbers.empty())
+                        SearchReplace(cmd, L"%path%", strData.filePath.c_str());
+                        if (!strData.matchLinesNumbers.empty())
                         {
-                            wchar_t buf[40] = {0};
-                            swprintf_s(buf, L"%ld", it->matchLinesNumbers[0]);
-                            SearchReplace(cmd, L"%line%", buf);
+                            auto line = std::to_wstring(strData.matchLinesNumbers[0]);
+                            auto move = std::to_wstring(strData.matchColumnsNumbers[0]);
+                            SearchReplace(cmd, L"%line%", line);
+                            SearchReplace(cmd, L"%column%", move);
                         }
                         else
+                        {
                             SearchReplace(cmd, L"%line%", L"0");
+                            SearchReplace(cmd, L"%column%", L"0");
+                        }
 
                         STARTUPINFO         startupInfo;
                         PROCESS_INFORMATION processInfo;
@@ -385,9 +391,8 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, POINT pt)
     }
 
     pContextMenu->Release();
-    g_iContext2 = nullptr;
-    g_iContext3 = nullptr;
-    delete m_pFolderHook;
+    g_iContext2   = nullptr;
+    g_iContext3   = nullptr;
     m_pFolderHook = nullptr;
     return (idCommand);
 }
@@ -402,7 +407,7 @@ void CShellContextMenu::InvokeCommand(LPCONTEXTMENU pContextMenu, UINT idCommand
     pContextMenu->InvokeCommand(&cmi);
 }
 
-void CShellContextMenu::SetObjects(const std::vector<CSearchInfo>& strVector, const std::vector<LineData>& lineVector)
+void CShellContextMenu::SetObjects(std::vector<CSearchInfo>&& strVector, std::vector<LineData>&& lineVector)
 {
     // free all allocated data
     if (m_psfFolder && bDelete)
@@ -492,45 +497,42 @@ HRESULT STDMETHODCALLTYPE CIShellFolderHook::GetUIObjectOf(HWND hwndOwner, UINT 
 
         // it seems the paths in the HDROP need to be sorted, otherwise
         // it might not work properly or even crash.
-        // to get the items sorted, we just add them to a set - that way we g
+        // to get the items sorted, we just add them to a set
         std::set<std::wstring, ICompare> sortedPaths;
-        for (auto it = m_pShellContextMenu->m_strVector.cbegin(); it != m_pShellContextMenu->m_strVector.cend(); ++it)
-            sortedPaths.insert(it->filePath);
-
-        int nLength = 0;
-        for (auto it = sortedPaths.cbegin(); it != sortedPaths.cend(); ++it)
+        size_t                           nLength = 0;
+        for (const auto& info : m_pShellContextMenu->m_strVector)
         {
-            nLength += static_cast<int>(it->size());
+            sortedPaths.insert(info.filePath);
+            nLength += info.filePath.size();
             nLength += 1; // '\0' separator
         }
-        int  nBufferSize = sizeof(DROPFILES) + ((nLength + 5) * sizeof(wchar_t));
-        auto pBuffer     = std::make_unique<char[]>(nBufferSize);
-        SecureZeroMemory(pBuffer.get(), nBufferSize);
-        DROPFILES* df             = reinterpret_cast<DROPFILES*>(pBuffer.get());
-        df->pFiles                = sizeof(DROPFILES);
-        df->fWide                 = 1;
-        wchar_t* pFileNames       = reinterpret_cast<wchar_t*>(reinterpret_cast<BYTE*>(pBuffer.get()) + sizeof(DROPFILES));
-        wchar_t* pCurrentFilename = pFileNames;
 
-        for (auto it = sortedPaths.cbegin(); it != sortedPaths.cend(); ++it)
-        {
-            wcscpy_s(pCurrentFilename, it->size() + 1, it->c_str());
-            pCurrentFilename += it->size();
-            *pCurrentFilename = '\0'; // separator between file names
-            pCurrentFilename++;
-        }
-        *pCurrentFilename = '\0'; // terminate array
-        pCurrentFilename++;
-        *pCurrentFilename = '\0'; // terminate array
-        STGMEDIUM medium  = {0};
-        medium.tymed      = TYMED_HGLOBAL;
-        medium.hGlobal    = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, nBufferSize + 20);
+        size_t    nBufferSize = sizeof(DROPFILES) + ((nLength + 5) * sizeof(wchar_t));
+        STGMEDIUM medium      = {0};
+        medium.tymed          = TYMED_HGLOBAL;
+        medium.hGlobal        = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, nBufferSize + 20);
         if (medium.hGlobal)
         {
             LPVOID pMem = ::GlobalLock(medium.hGlobal);
             if (pMem)
             {
-                memcpy(pMem, pBuffer.get(), nBufferSize);
+                DROPFILES* df             = static_cast<DROPFILES*>(pMem);
+                df->pFiles                = sizeof(DROPFILES);
+                df->fWide                 = 1;
+                wchar_t* pFileNames       = reinterpret_cast<wchar_t*>(static_cast<BYTE*>(pMem) + sizeof(DROPFILES));
+                wchar_t* pCurrentFilename = pFileNames;
+
+                for (auto it = sortedPaths.cbegin(); it != sortedPaths.cend(); ++it)
+                {
+                    wcscpy_s(pCurrentFilename, it->size() + 1, it->c_str());
+                    pCurrentFilename += it->size();
+                    *pCurrentFilename = '\0'; // separator between file names
+                    pCurrentFilename++;
+                }
+                *pCurrentFilename = '\0'; // terminate array
+                pCurrentFilename++;
+                *pCurrentFilename = '\0'; // terminate array
+
                 GlobalUnlock(medium.hGlobal);
                 FORMATETC formatEtc   = {0};
                 formatEtc.cfFormat    = CF_HDROP;

@@ -33,19 +33,19 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
-#. Resource IDs: (175)
-#, c-format
-msgid "%ld files, skipped %ld files. %ld results selected."
-msgstr "%ld súborov, vynechané %ld súborov. %ld results selected."
-
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
 msgstr "%ld viac výskytov"
 
 #. Resource IDs: (1069)
-msgid "%path% is replaced with the path of the file, %line% with the line to jump to"
+msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %column% with in line offset"
 msgstr ""
+
+#. Resource IDs: (175)
+#, c-format
+msgid "%s files, skipped %s files. %s results selected."
+msgstr "%s súborov, vynechané %s súborov. %s results selected."
 
 #. Resource IDs: (119)
 msgid "&About grepWin..."
@@ -117,16 +117,20 @@ msgid "Cancel"
 msgstr "Zrušiť"
 
 #. Resource IDs: (169)
-msgid "Capture search"
+msgid "Capture search (Shows replaced text)"
 msgstr ""
 
 #. Resource IDs: (1088)
 msgid "Check for updates"
 msgstr ""
 
+#. Resource IDs: (180)
+msgid "Column"
+msgstr ""
+
 #. Resource IDs: (1068)
-msgid "Command line to start an editor at a specific line:"
-msgstr "Príkazový riadok na spustenie editora na konkrétnom riadku:"
+msgid "Command line to start an editor at a specific line and in line offset:"
+msgstr ""
 
 #. Resource IDs: (1060)
 msgid "Content"
@@ -242,8 +246,8 @@ msgstr "Súbory"
 
 #. Resource IDs: (174)
 #, c-format
-msgid "Found %ld files, skipped %ld files."
-msgstr "Našlo %ld súborov, vynechané %ld súborov."
+msgid "Found %s files, skipped %s files."
+msgstr "Našlo %s súborov, vynechané %s súborov."
 
 #. Resource IDs: (109)
 msgid "GREPWIN"
@@ -282,7 +286,7 @@ msgid "Invalid path!"
 msgstr "Neplatná cesta!"
 
 #. Resource IDs: (161)
-msgid "Inverse search (NOT searchstring)"
+msgid "Inverse search"
 msgstr ""
 
 #. Resource IDs: (1019)
@@ -307,8 +311,8 @@ msgstr "Riadok"
 
 #. Resource IDs: (150)
 #, c-format
-msgid "Line %5ld : %30s\n"
-msgstr "Riadok %5ld : %30s\n"
+msgid "Line %5ld : %s\n"
+msgstr ""
 
 #. Resource IDs: (135)
 msgid "Matches"
@@ -448,13 +452,13 @@ msgstr "Hľadaný reťazec"
 
 #. Resource IDs: (128)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "Prehľadané %ld súborov, vynechané %ld súborov. Našlo sa %ld výskytov v %ld súboroch."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files."
+msgstr "Prehľadané %s súborov, vynechané %s súborov. Našlo sa %s výskytov v %s súboroch."
 
 #. Resource IDs: (173)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr "Prehľadané %ld súborov, vynechané %ld súborov. Našlo sa %ld výskytov v %ld súboroch. %ld results selected."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files. %s results selected."
+msgstr "Prehľadané %s súborov, vynechané %s súborov. Našlo sa %s výskytov v %s súboroch. %s results selected."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
@@ -604,7 +608,7 @@ msgid "number of NULL bytes per MB allowed for a file to still be considered tex
 msgstr ""
 
 #. Resource IDs: (112)
-msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
+msgid "only files that match this pattern are searched.\r\nText match extended. Use \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr ""
 
 #. Resource IDs: (176)

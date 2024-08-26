@@ -33,19 +33,19 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
-#. Resource IDs: (175)
-#, c-format
-msgid "%ld files, skipped %ld files. %ld results selected."
-msgstr "%ld fichier(s). Ignoré %ld fichier(s). %ld results selected."
-
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
 msgstr "%ld autres correspondances"
 
 #. Resource IDs: (1069)
-msgid "%path% is replaced with the path of the file, %line% with the line to jump to"
-msgstr "%path% est remplacé par le chemin du fichier, %line% par la ligne à atteindre"
+msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %column% with in line offset"
+msgstr ""
+
+#. Resource IDs: (175)
+#, c-format
+msgid "%s files, skipped %s files. %s results selected."
+msgstr "%s fichier(s). Ignoré %s fichier(s). %s results selected."
 
 #. Resource IDs: (119)
 msgid "&About grepWin..."
@@ -117,16 +117,20 @@ msgid "Cancel"
 msgstr "Annuler"
 
 #. Resource IDs: (169)
-msgid "Capture search"
+msgid "Capture search (Shows replaced text)"
 msgstr ""
 
 #. Resource IDs: (1088)
 msgid "Check for updates"
 msgstr ""
 
+#. Resource IDs: (180)
+msgid "Column"
+msgstr ""
+
 #. Resource IDs: (1068)
-msgid "Command line to start an editor at a specific line:"
-msgstr "Commande de lancement d'un éditeur à une ligne spécifique :"
+msgid "Command line to start an editor at a specific line and in line offset:"
+msgstr ""
 
 #. Resource IDs: (1060)
 msgid "Content"
@@ -242,8 +246,8 @@ msgstr "fichiers"
 
 #. Resource IDs: (174)
 #, c-format
-msgid "Found %ld files, skipped %ld files."
-msgstr "Trouvé %ld fichier(s). Ignoré %ld fichier(s)."
+msgid "Found %s files, skipped %s files."
+msgstr "Trouvé %s fichier(s). Ignoré %s fichier(s)."
 
 #. Resource IDs: (109)
 msgid "GREPWIN"
@@ -282,7 +286,7 @@ msgid "Invalid path!"
 msgstr "Chemin invalide !"
 
 #. Resource IDs: (161)
-msgid "Inverse search (NOT searchstring)"
+msgid "Inverse search"
 msgstr ""
 
 #. Resource IDs: (1019)
@@ -307,8 +311,8 @@ msgstr "Ligne"
 
 #. Resource IDs: (150)
 #, c-format
-msgid "Line %5ld : %30s\n"
-msgstr "Ligne %5ld : %30s\n"
+msgid "Line %5ld : %s\n"
+msgstr ""
 
 #. Resource IDs: (135)
 msgid "Matches"
@@ -448,13 +452,13 @@ msgstr "Motif de recherche"
 
 #. Resource IDs: (128)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "Cherché dans %ld fichier(s). Ignoré %ld fichier(s). Trouvé %ld correspondance(s) dans %ld fichier(s)."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files."
+msgstr "Cherché dans %s fichier(s). Ignoré %s fichier(s). Trouvé %s correspondance(s) dans %s fichier(s)."
 
 #. Resource IDs: (173)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr "Cherché dans %ld fichier(s). Ignoré %ld fichier(s). Trouvé %ld correspondance(s) dans %ld fichier(s). %ld results selected."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files. %s results selected."
+msgstr "Cherché dans %s fichier(s). Ignoré %s fichier(s). Trouvé %s correspondance(s) dans %s fichier(s). %s results selected."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
@@ -604,8 +608,8 @@ msgid "number of NULL bytes per MB allowed for a file to still be considered tex
 msgstr ""
 
 #. Resource IDs: (112)
-msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
-msgstr "La recherche ne sera manée que dans les fichiers qui correspondent à ce motif.\nUtiliser '|' comme séparateur\nExemple : *.cpp|*.h"
+msgid "only files that match this pattern are searched.\r\nText match extended. Use \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
+msgstr ""
 
 #. Resource IDs: (176)
 msgid "open list with recent entries"

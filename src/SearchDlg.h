@@ -1,6 +1,6 @@
 // grepWin - regex search and replace for Windows
 
-// Copyright (C) 2007-2023 - Stefan Kueng
+// Copyright (C) 2007-2024 - Stefan Kueng
 
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -58,8 +58,8 @@ enum class ExecuteAction
 class CSearchDlg : public CDialog
 {
 public:
-    CSearchDlg(HWND hParent);
-    ~CSearchDlg() override;
+          CSearchDlg(HWND hParent);
+    ~     CSearchDlg() override;
 
     DWORD SearchThread();
     void  SetSearchPath(const std::wstring& path);
@@ -93,38 +93,45 @@ public:
         m_showContent    = true;
         m_showContentSet = true;
     }
-    bool isRegexValid() const;
+    bool isSearchPathValid() const;
+    bool isSearchValid() const;
     bool isExcludeDirsRegexValid() const;
     bool isFileNameMatchRegexValid() const;
 
 protected:
-    LRESULT CALLBACK DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
-    LRESULT          DoCommand(int id, int msg);
-    bool             PreTranslateMessage(MSG* pMsg) override;
+    LRESULT CALLBACK    DlgFunc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
+    LRESULT             DoCommand(int id, int msg);
+    bool                PreTranslateMessage(MSG* pMsg) override;
 
-    void             SearchFile(CSearchInfo sInfo, const std::wstring& searchRoot, bool bSearchAlways, bool bIncludeBinary, bool bUseRegex, bool bCaseSensitive, bool bDotMatchesNewline, const std::wstring& searchString, const std::wstring& searchStringUtf16Le, std::atomic_bool& bCancelled);
+    std::wstring        BackupFile(const std::wstring& destParentDir, const std::wstring& filePath, bool bMove);
+    int                 AdoptTempResultFile(CSearchInfo& sInfo, const std::wstring& searchRoot, const std::wstring& tempFilePath);
+    int                 SearchOnTextFile(CSearchInfo& sInfo, const std::wstring& searchRoot, const std::wstring& searchExpression, const std::wstring& replaceExpression, UINT syntaxFlags, UINT matchFlags, CTextFile& textFile);
+    template<typename CharT = char>
+    int                 SearchByFilePath(CSearchInfo& sInfo, const std::wstring& searchRoot, const std::wstring& searchExpression, const std::wstring& replaceExpression, UINT syntaxFlags, UINT matchFlags, bool misaligned, CharT* dummy = nullptr);
+    void                SendResult(const CSearchInfo& sInfo, const int nCount);
+    void                SearchFile(CSearchInfo sInfo, const std::wstring& searchRoot);
 
-    bool             InitResultList();
-    void             FillResultList();
-    bool             AddFoundEntry(CSearchInfo* pInfo, bool bOnlyListControl = false);
-    void             ShowContextMenu(HWND hWnd, int x, int y);
-    void             DoListNotify(LPNMITEMACTIVATE lpNMItemActivate);
-    void             OpenFileAtListIndex(int listIndex);
-    void             UpdateInfoLabel();
-    bool             SaveSettings();
-    void             SaveWndPosition();
-    void             formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool forceShortFmt) const;
-    int              CheckRegex();
-    bool             MatchPath(LPCTSTR pathBuf) const;
-    void             AutoSizeAllColumns();
-    int              GetSelectedListIndex(int index);
-    int              GetSelectedListIndex(bool fileList, int index) const;
-    static bool      FailedShowMessage(HRESULT hr);
-    void             CheckForUpdates(bool force = false);
-    void             ShowUpdateAvailable();
-    bool             IsVersionNewer(const std::wstring& sVer) const;
-    bool             CloneWindow();
-    std::wstring     ExpandString(const std::wstring& replaceString) const;
+    bool                InitResultList();
+    void                FillResultList();
+    void                SetSearchModeUI(bool isTextMode);
+    bool                AddFoundEntry(const CSearchInfo* pInfo, bool bOnlyListControl = false);
+    void                ShowContextMenu(HWND hWnd, int x, int y);
+    LRESULT             ColorizeMatchResultProc(LPNMLVCUSTOMDRAW lpLVCD);
+    LRESULT             DoListNotify(LPNMITEMACTIVATE lpNMItemActivate);
+    void                OpenFileAtListIndex(int listIndex);
+    void                UpdateInfoLabel();
+    bool                SaveSettings();
+    void                SaveWndPosition();
+    static void         formatDate(wchar_t dateNative[], const FILETIME& fileTime, bool forceShortFmt);
+    bool                MatchPath(LPCTSTR pathBuf) const;
+    void                AutoSizeAllColumns();
+    int                 GetSelectedListIndex(int index);
+    int                 GetSelectedListIndex(bool fileList, int index) const;
+    static bool         FailedShowMessage(HRESULT hr);
+    void                CheckForUpdates(bool force = false);
+    void                ShowUpdateAvailable();
+    static bool         IsVersionNewer(const std::wstring& sVer);
+    bool                CloneWindow();
 
 private:
     HWND                              m_hParent;
@@ -188,8 +195,8 @@ private:
     bool                              m_bConfirmationOnReplace;
     bool                              m_showContent;
     bool                              m_showContentSet;
-    std::vector<CSearchInfo>          m_items;
-    std::vector<std::tuple<int, int>> m_listItems;
+    std::deque<CSearchInfo>           m_items;
+    std::deque<std::tuple<int, int>>  m_listItems;
     std::set<std::wstring>            m_backupAndTempFiles;
     int                               m_totalItems;
     int                               m_searchedItems;
@@ -199,14 +206,18 @@ private:
     std::wstring                      m_resultString;
     std::wstring                      m_toolTipReplaceString;
     std::unique_ptr<CInfoRtfDialog>   m_rtfDialog;
-    bool                              m_isRegexValid;
-    bool                              m_isExcludeDirsRegexValid;
-    bool                              m_isFileNameMatchingRegexValid;
+
+    bool                              m_hasSearchDir;
+    bool                              m_bSearchPathValid;
+    int                               m_searchValidLength;
+    int                               m_replaceValidLength;
+    bool                              m_bExcludeDirsRegexValid;
+    bool                              m_bFileNameMatchingRegexValid;
 
     CDlgResizer                       m_resizer;
     int                               m_themeCallbackId;
 
-    CFileDropTarget*                  m_pDropTarget;
+    std::unique_ptr<CFileDropTarget>  m_pDropTarget;
 
     static UINT                       m_grepwinStartupmsg;
 

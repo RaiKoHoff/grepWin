@@ -88,7 +88,12 @@
     <exec program="tools\restext.exe" >
       <arg value="extract" />
       <arg value="bin\release\grepWin.exe" />
-      <arg value="translations\Chinese.lang" />
+      <arg value="translations\Chinese Simplified.lang" />
+    </exec>
+    <exec program="tools\restext.exe" >
+      <arg value="extract" />
+      <arg value="bin\release\grepWin.exe" />
+      <arg value="translations\Chinese Traditional.lang" />
     </exec>
     <exec program="tools\restext.exe" >
       <arg value="extract" />
@@ -236,6 +241,12 @@
       </fileset>
       <fileset basedir="src\Setup">
         <include name="website.url" />
+      </fileset>
+    </zip>
+    <!-- zip all pdbs -->
+    <zip zipfile="bin\grepWin-${verstring}_pdbs.zip" ziplevel="9">
+      <fileset basedir="bin">
+        <include name="release*/grepWin.pdb" />
       </fileset>
     </zip>
 
