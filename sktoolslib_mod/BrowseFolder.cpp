@@ -211,7 +211,7 @@ CBrowseFolder::RetVal CBrowseFolder::Show(HWND parent, std::wstring& path, const
         {
             using SHCIFPN = HRESULT(WINAPI*)(PCWSTR pszPath, IBindCtx * pbc, REFIID riid, void** ppv);
 
-            HMODULE hLib = LoadLibrary(L"shell32.dll");
+            HMODULE hLib = LoadLibraryExW(L"shell32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
             if (hLib)
             {
                 SHCIFPN pShcifpn = reinterpret_cast<SHCIFPN>(GetProcAddress(hLib, "SHCreateItemFromParsingName"));
@@ -354,7 +354,7 @@ void CBrowseFolder::SetFont(HWND hwnd, LPCWSTR fontName, int fontSize)
     GetObject(GetWindowFont(hwnd), sizeof(lf), &lf);
     lf.lfWeight = FW_REGULAR;
     lf.lfHeight = static_cast<LONG>(fontSize);
-    lstrcpyn(lf.lfFaceName, fontName, _countof(lf.lfFaceName));
+    wcscpy_s(lf.lfFaceName, _countof(lf.lfFaceName), fontName);
     HFONT hf = CreateFontIndirect(&lf);
     SetBkMode(hdc, OPAQUE);
     SendMessage(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(hf), TRUE);
@@ -407,7 +407,7 @@ int CBrowseFolder::BrowseCallBackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPARA
                 return 0;
 
             //Gets the dimensions of the windows
-            const int controlHeight = ::GetSystemMetrics(SM_CYMENUCHECK) + 4;
+            const int controlHeight = ::GetSystemMetricsForDpi(SM_CYMENUCHECK, GetDpiForWindow(hwnd)) + 4;
             GetWindowRect(hwnd, &dialog);
             GetWindowRect(m_listView, &listViewRect);
             POINT pt;

@@ -427,7 +427,7 @@ msgstr "搜尋(&F):"
 
 #. Resource IDs: (1042)
 msgid "Search case-sensitive"
-msgstr "搜尋區分大小寫"
+msgstr "區分大小寫"
 
 #. Resource IDs: (1015)
 msgid "Search in"
@@ -670,4 +670,3 @@ msgstr "這將在右鍵選單中新增一個名為「使用編輯器開啟」的
 #. Resource IDs: (3006)
 msgid "Stay On Top"
 msgstr "總是置頂"
-

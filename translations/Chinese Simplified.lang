@@ -33,19 +33,19 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
-#. Resource IDs: (175)
-#, c-format
-msgid "%ld files, skipped %ld files. %ld results selected."
-msgstr "%ld 个文件, 已跳过 %ld 个文件. 已选择 %ld 个结果."
-
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
 msgstr "还有 %ld 个匹配"
 
 #. Resource IDs: (1069)
-msgid "%path% is replaced with the path of the file, %line% with the line to jump to"
-msgstr "%path% 将被替换为文件的路径, %line% 将被替换为要转至的行号."
+msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %column% with in line offset"
+msgstr ""
+
+#. Resource IDs: (175)
+#, c-format
+msgid "%s files, skipped %s files. %s results selected."
+msgstr "%s 个文件, 已跳过 %s 个文件. 已选择 %s 个结果."
 
 #. Resource IDs: (119)
 msgid "&About grepWin..."
@@ -117,16 +117,20 @@ msgid "Cancel"
 msgstr "取消"
 
 #. Resource IDs: (169)
-msgid "Capture search"
-msgstr "输入替换搜索"
+msgid "Capture search (Shows replaced text)"
+msgstr ""
 
 #. Resource IDs: (1088)
 msgid "Check for updates"
 msgstr "检查更新"
 
+#. Resource IDs: (180)
+msgid "Column"
+msgstr ""
+
 #. Resource IDs: (1068)
-msgid "Command line to start an editor at a specific line:"
-msgstr "用于在指定的行来启动编辑器的命令行:"
+msgid "Command line to start an editor at a specific line and in line offset:"
+msgstr ""
 
 #. Resource IDs: (1060)
 msgid "Content"
@@ -242,8 +246,8 @@ msgstr "文件"
 
 #. Resource IDs: (174)
 #, c-format
-msgid "Found %ld files, skipped %ld files."
-msgstr "已找到 %ld 个文件, 已跳过 %ld 个文件."
+msgid "Found %s files, skipped %s files."
+msgstr "已找到 %s 个文件, 已跳过 %s 个文件."
 
 #. Resource IDs: (109)
 msgid "GREPWIN"
@@ -282,8 +286,8 @@ msgid "Invalid path!"
 msgstr "无效路径!"
 
 #. Resource IDs: (161)
-msgid "Inverse search (NOT searchstring)"
-msgstr "反向搜索（不是搜索字符串）"
+msgid "Inverse search"
+msgstr ""
 
 #. Resource IDs: (1019)
 msgid "KB"
@@ -307,8 +311,8 @@ msgstr "行号"
 
 #. Resource IDs: (150)
 #, c-format
-msgid "Line %5ld : %30s\n"
-msgstr "行 %5ld : %30s\n"
+msgid "Line %5ld : %s\n"
+msgstr ""
 
 #. Resource IDs: (135)
 msgid "Matches"
@@ -448,13 +452,13 @@ msgstr "搜索字符串"
 
 #. Resource IDs: (128)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "已搜索 %ld 个文件, 已跳过 %ld 个文件. 已找到 %ld 个匹配于 %ld 个文件中."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files."
+msgstr "已搜索 %s 个文件, 已跳过 %s 个文件. 已找到 %s 个匹配于 %s 个文件中."
 
 #. Resource IDs: (173)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr "已搜索 %ld 个文件, 已跳过 %ld 个文件. 已找到 %ld 个匹配于 %ld 个文件中. 已选择 %ld 个结果."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files. %s results selected."
+msgstr "已搜索 %s 个文件, 已跳过 %s 个文件. 已找到 %s 个匹配于 %s 个文件中. 已选择 %s 个结果."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
@@ -604,8 +608,8 @@ msgid "number of NULL bytes per MB allowed for a file to still be considered tex
 msgstr "允许将文件仍视为文本而不是二进制文件的每 MB 空字节数"
 
 #. Resource IDs: (112)
-msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
-msgstr "仅匹配此样式的文件被搜索.\r\n 使用 \"|\" 作为分隔符.\r\n 例如: *.cpp|*.h"
+msgid "only files that match this pattern are searched.\r\nText match extended. Use \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
+msgstr ""
 
 #. Resource IDs: (176)
 msgid "open list with recent entries"
@@ -642,7 +646,7 @@ msgstr "将被递归搜索的路径.\r\n 使用 \"|\" 符号来分隔路径.\r\n
 
 #. Resource IDs: (113)
 msgid "you can exclude directories, e.g. CVS and images.\r\nExample: ^(CVS|images)$\r\nNote, '.svn' folders are 'hidden' on Windows, so they usually are not scanned."
-msgstr "你可以排除目录, 比如: CVS 和 images.\r\n 例如: ^(CVS|images)$\r\n 注意, \".svn\" 目录在 Windows 中是隐藏的, 所以通常不扫描它们."
+msgstr "你可以排除目录, 比如: CVS 和 images.\r\n例如: ^(CVS|images)$\r\n注意, \".svn\" 目录在 Windows 中是隐藏的, 所以通常不扫描它们."
 
 #. Resource IDs: (1064, 1066, 1067)
 msgid "|"

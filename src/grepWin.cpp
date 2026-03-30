@@ -18,6 +18,8 @@
 //
 #include "stdafx.h"
 #include "strsafe.h"
+#include <pathcch.h>
+#pragma comment(lib, "pathcch.lib")
 #include "resource.h"
 #include "SearchDlg.h"
 #include "AboutDlg.h"
@@ -238,7 +240,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
     g_hDlgIcon128 = nullptr;
     LoadIconWithScaleDown(hInstance, MAKEINTRESOURCE(IDI_GREPWIN), 128, 128, &g_hDlgIcon128);
 
-    HMODULE hRichEdt = LoadLibrary(L"Riched20.dll");
+    HMODULE hRichEdt = LoadLibraryExW(L"Riched20.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
     CCmdLineParser parser(lpCmdLine);
 
@@ -348,8 +350,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
         {
             WCHAR absPath[MAX_PATH] = {L'\0'};
             StringCchCopy(absPath, MAX_PATH, moduleDir.c_str());
-            PathAppend(absPath, g_iniPath.c_str());
-            g_iniPath = absPath;
+            if (SUCCEEDED(PathCchAppend(absPath, MAX_PATH, g_iniPath.c_str()))) {
+                g_iniPath = absPath;
+            }
         }
         g_iniFile.SetUnicode();
         g_iniFile.SetMultiLine();
@@ -417,11 +420,18 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
             {
                 TCHAR wchAppPath[MAX_PATH] = {L'\0'};
                 GetModuleFileName(nullptr, wchAppPath, MAX_PATH);
-                PathRemoveFileSpec(wchAppPath);
-                PathAppend(wchAppPath, languagefile.c_str());
-                TCHAR wchLngPath[MAX_PATH] = {L'\0'};
-                PathCanonicalize(wchLngPath, wchAppPath);
-                CLanguage::Instance().LoadFile(wchLngPath);
+                if (SUCCEEDED(PathCchRemoveFileSpec(wchAppPath, MAX_PATH)) &&
+                    SUCCEEDED(PathCchAppend(wchAppPath, MAX_PATH, languagefile.c_str())))
+                {
+                    TCHAR wchLngPath[MAX_PATH] = {L'\0'};
+                    if (SUCCEEDED(PathCchCanonicalize(wchLngPath, MAX_PATH, wchAppPath))) {
+                        CLanguage::Instance().LoadFile(wchLngPath);
+                    } else {
+                        CLanguage::Instance().LoadFile(wchAppPath);
+                    }
+                }
+                else
+                    CLanguage::Instance().LoadFile(languagefile);
             }
             else
                 CLanguage::Instance().LoadFile(languagefile);

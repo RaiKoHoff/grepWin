@@ -33,19 +33,19 @@ msgstr ""
 # ONLY change the msgstr field. Do NOT change any other.
 # If you do not want to change an Accelerator Key, copy msgid to msgstr
 
-#. Resource IDs: (175)
-#, c-format
-msgid "%ld files, skipped %ld files. %ld results selected."
-msgstr "%ld fájlban, kihagyva %ld fájl. %ld eredmény kiválasztva."
-
 #. Resource IDs: (149)
 #, c-format
 msgid "%ld more matches"
 msgstr "%ld további találat"
 
 #. Resource IDs: (1069)
-msgid "%path% is replaced with the path of the file, %line% with the line to jump to"
+msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %column% with in line offset"
 msgstr "%path% helyébe a fájl elérési útvonala, %line% helyébe az a sor lép, amelyre ugrani kell"
+
+#. Resource IDs: (175)
+#, c-format
+msgid "%s files, skipped %s files. %s results selected."
+msgstr "%s fájlban, kihagyva %s fájl. %s eredmény kiválasztva."
 
 #. Resource IDs: (119)
 msgid "&About grepWin..."
@@ -117,15 +117,19 @@ msgid "Cancel"
 msgstr "Mégsem"
 
 #. Resource IDs: (169)
-msgid "Capture search"
-msgstr "Keresés rögzítése"
+msgid "Capture search (Shows replaced text)"
+msgstr "Keresés rögzítése (mutassa a lecserélt szöveget)"
 
 #. Resource IDs: (1088)
 msgid "Check for updates"
 msgstr "Frissítések ellenőrzése"
 
+#. Resource IDs: (180)
+msgid "Column"
+msgstr "Oszlop"
+
 #. Resource IDs: (1068)
-msgid "Command line to start an editor at a specific line:"
+msgid "Command line to start an editor at a specific line and in line offset:"
 msgstr "Parancs, ami a szerkesztőt egy bizonyos sornál nyitja meg:"
 
 #. Resource IDs: (1060)
@@ -134,11 +138,11 @@ msgstr "Tartalom"
 
 #. Resource IDs: (177)
 msgid "Copy column for all items"
-msgstr ""
+msgstr "Oszlop másolása az összes elemhez"
 
 #. Resource IDs: (178)
 msgid "Copy column for selected items"
-msgstr ""
+msgstr "Oszlop másolása a kiválasztott elemekhez"
 
 #. Resource IDs: (145)
 msgid "Copy filename to clipboard"
@@ -242,8 +246,8 @@ msgstr "Fájlok"
 
 #. Resource IDs: (174)
 #, c-format
-msgid "Found %ld files, skipped %ld files."
-msgstr "Talált %ld fájlban, kihagyva %ld fájl."
+msgid "Found %s files, skipped %s files."
+msgstr "Talált %s fájlban, kihagyva %s fájl."
 
 #. Resource IDs: (109)
 msgid "GREPWIN"
@@ -282,8 +286,8 @@ msgid "Invalid path!"
 msgstr "Érvénytelen útvonal!"
 
 #. Resource IDs: (161)
-msgid "Inverse search (NOT searchstring)"
-msgstr "Fordított keresés (NEM keresési karakterlánc)"
+msgid "Inverse search"
+msgstr "Fordított keresés"
 
 #. Resource IDs: (1019)
 msgid "KB"
@@ -307,7 +311,7 @@ msgstr "Sor"
 
 #. Resource IDs: (150)
 #, c-format
-msgid "Line %5ld : %30s\n"
+msgid "Line %5ld : %s\n"
 msgstr "%5ld : %30s sor\n"
 
 #. Resource IDs: (135)
@@ -396,7 +400,7 @@ msgstr "Regex keresési szöveg:"
 
 #. Resource IDs: (179)
 msgid "Regex stack error"
-msgstr ""
+msgstr "Regex verem hiba"
 
 #. Resource IDs: (152)
 msgid "Relative paths are not allowed. Please enter an absolute path!"
@@ -448,13 +452,13 @@ msgstr "Keresett szöveg"
 
 #. Resource IDs: (128)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files."
-msgstr "Keresés %ld fájlban, kihagyva %ld fájl. Lett %ld találat %ld fájlban."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files."
+msgstr "Keresés %s fájlban, kihagyva %s fájl. Lett %s találat %s fájlban."
 
 #. Resource IDs: (173)
 #, c-format
-msgid "Searched %ld files, skipped %ld files. Found %ld matches in %ld files. %ld results selected."
-msgstr "Keresés %ld fájlban, kihagyva %ld fájl. %ld egyezést talált %ld fájlban. %ld eredmény kiválasztva."
+msgid "Searched %s files, skipped %s files. Found %s matches in %s files. %s results selected."
+msgstr "Keresés %s fájlban, kihagyva %s fájl. %s egyezést talált %s fájlban. %s eredmény kiválasztva."
 
 #. Resource IDs: (140)
 msgid "Select Editor Application..."
@@ -604,7 +608,7 @@ msgid "number of NULL bytes per MB allowed for a file to still be considered tex
 msgstr "a NULL bájtok MB-onként megengedett száma, hogy egy fájl még mindig szövegnek és nem binárisnak minősüljön"
 
 #. Resource IDs: (112)
-msgid "only files that match this pattern are searched.\r\nUse \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
+msgid "only files that match this pattern are searched.\r\nText match extended. Use \"|\" as the delimiter.\r\nExample: *.cpp|*.h"
 msgstr "csak a mintának megfelelő fájlokat keresi a rendszer.\r\n\"|\" jelet használja elválasztójelként.\r\nPélda: *.cpp|*.h"
 
 #. Resource IDs: (176)
@@ -646,7 +650,7 @@ msgstr "kizárhat könyvtárakat, például a CVS-t és a képeket.\r\Példa: ^(
 
 #. Resource IDs: (1064, 1066, 1067)
 msgid "|"
-msgstr ""
+msgstr "|"
 
 #. Resource IDs: (1024)
 msgid "⑂"
