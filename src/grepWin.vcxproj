@@ -86,15 +86,19 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <CodeAnalysisRuleSet>SK.ruleset</CodeAnalysisRuleSet>
+    <TargetName>$(ProjectName)_portable</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <CodeAnalysisRuleSet>SK.ruleset</CodeAnalysisRuleSet>
+    <TargetName>$(ProjectName)_portable</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CodeAnalysisRuleSet>SK.ruleset</CodeAnalysisRuleSet>
+    <TargetName>$(ProjectName)_portable</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <CodeAnalysisRuleSet>SK.ruleset</CodeAnalysisRuleSet>
+    <TargetName>$(ProjectName)_portable</TargetName>
   </PropertyGroup>
   <PropertyGroup Label="Vcpkg">
     <VcpkgEnableManifest>true</VcpkgEnableManifest>
@@ -364,4 +368,10 @@
     <Error Condition="!Exists('..\packages\Microsoft.SourceLink.GitHub.10.0.103\build\Microsoft.SourceLink.GitHub.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.SourceLink.GitHub.10.0.103\build\Microsoft.SourceLink.GitHub.props'))" />
     <Error Condition="!Exists('..\packages\Microsoft.SourceLink.GitHub.10.0.103\build\Microsoft.SourceLink.GitHub.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.SourceLink.GitHub.10.0.103\build\Microsoft.SourceLink.GitHub.targets'))" />
   </Target>
+  <ItemDefinitionGroup>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D "$(SolutionDir)translations\*.lang" "$(OutDir)"</Command>
+      <Message>Copying language files to output directory</Message>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
 </Project>
