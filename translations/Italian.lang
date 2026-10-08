@@ -297,6 +297,10 @@ msgstr "Includi file di sistema"
 msgid "Invalid path!"
 msgstr "Percorso non valido!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Ricerca inversa"
@@ -396,7 +400,7 @@ msgstr "Preimpostate"
 
 #. Resource IDs: (1065)
 msgid "Press F1 for help"
-msgstr "  Premi F1 per l'aiuto."
+msgstr "Premi F1 per l'aiuto."
 
 #. Resource IDs: (154)
 msgid "Programs"
@@ -470,6 +474,10 @@ msgstr "Ricerca in"
 msgid "Search in found files"
 msgstr "Cerca nei file trovati"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Risultati della ricerca"
@@ -477,6 +485,10 @@ msgstr "Risultati della ricerca"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Stringa di ricerca"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr ""
 
 #. Resource IDs: (128)
 #, c-format

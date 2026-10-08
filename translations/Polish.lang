@@ -297,6 +297,10 @@ msgstr "Uwzględnij systemowe"
 msgid "Invalid path!"
 msgstr "Niewłaściwa ścieżka!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr "Nieprawidłowy tekst wyszukiwania"
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Wyszukiwanie odwrotne"
@@ -470,6 +474,10 @@ msgstr "Szukaj w"
 msgid "Search in found files"
 msgstr "Szukaj w znalezionych plikach"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Wyniki wyszukiwania"
@@ -477,6 +485,10 @@ msgstr "Wyniki wyszukiwania"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Szukana fraza"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr "Ciąg wyszukiwania zawiera znaki niebędące słowami, więc wyszukiwanie \"całych słów\" nie jest możliwe!"
 
 #. Resource IDs: (128)
 #, c-format

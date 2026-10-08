@@ -338,6 +338,8 @@
     <None Include="..\default.build">
       <SubType>Designer</SubType>
     </None>
+    <None Include="..\vcpkg-configuration.json" />
+    <None Include="..\vcpkg.json" />
     <None Include="..\version.build.in" />
     <None Include="..\versioninfo.build" />
     <None Include="packages.config" />

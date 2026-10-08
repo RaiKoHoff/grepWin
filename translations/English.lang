@@ -297,6 +297,10 @@ msgstr ""
 msgid "Invalid path!"
 msgstr ""
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr ""
@@ -470,12 +474,20 @@ msgstr ""
 msgid "Search in found files"
 msgstr ""
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr ""
 
 #. Resource IDs: (105)
 msgid "Search string"
+msgstr ""
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
 msgstr ""
 
 #. Resource IDs: (128)

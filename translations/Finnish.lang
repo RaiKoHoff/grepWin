@@ -297,6 +297,10 @@ msgstr "Sisällytä järjestelmäkohteet"
 msgid "Invalid path!"
 msgstr "Virheellinen polku!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr "Virheellinen hakuteksti"
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Käänteinen haku"
@@ -470,6 +474,10 @@ msgstr "Etsi mistä"
 msgid "Search in found files"
 msgstr "Hae löydetyistä tiedostoista"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Hakutulokset"
@@ -477,6 +485,10 @@ msgstr "Hakutulokset"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Hakusana"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr "Hakusana sisältää muita merkkejä kuin sanoja, joten \"kokonaisen sanan\" hakua ei voida suorittaa!"
 
 #. Resource IDs: (128)
 #, c-format

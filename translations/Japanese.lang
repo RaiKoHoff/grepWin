@@ -297,6 +297,10 @@ msgstr "システムファイルを含める"
 msgid "Invalid path!"
 msgstr "パスが無効です!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "検索結果を反転"
@@ -470,6 +474,10 @@ msgstr "検索場所"
 msgid "Search in found files"
 msgstr "見つかったファイルから検索"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "検索結果"
@@ -477,6 +485,10 @@ msgstr "検索結果"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "検索文字列"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr ""
 
 #. Resource IDs: (128)
 #, c-format

@@ -297,6 +297,10 @@ msgstr "Αρχεία συστήματος"
 msgid "Invalid path!"
 msgstr "Μη έγκυρη διαδρομή!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Αντίστροφη αναζήτηση"
@@ -470,6 +474,10 @@ msgstr "Αναζήτηση σε"
 msgid "Search in found files"
 msgstr "Αναζήτηση στα βρεθέντα αρχεία"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Ευρήματα"
@@ -477,6 +485,10 @@ msgstr "Ευρήματα"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Συμβολοσειρά αναζήτησης"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr ""
 
 #. Resource IDs: (128)
 #, c-format

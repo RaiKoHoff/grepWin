@@ -89,7 +89,7 @@ msgstr "Om grepWin"
 
 #. Resource IDs: (1021)
 msgid "Add to Presets"
-msgstr "Lägg till favoriter"
+msgstr "Lägg till i favoriter"
 
 #. Resource IDs: (155)
 msgid "All Files"
@@ -194,7 +194,7 @@ msgstr "Mörkt läge"
 
 #. Resource IDs: (139)
 msgid "Date modified"
-msgstr "Datum modifierad"
+msgstr "Ändringsdatum"
 
 #. Resource IDs: (1078)
 msgid "Don't warn when replacing without creating backups"
@@ -242,7 +242,7 @@ msgstr "Exportera resultat..."
 
 #. Resource IDs: (158)
 msgid "Ext"
-msgstr "Ext"
+msgstr "Tillägg"
 
 #. Resource IDs: (1039)
 msgid "File Names match:\nuse '|' to separate multiple text match patterns, prepen&d '-' to exclude"
@@ -296,6 +296,10 @@ msgstr "Inkludera systemfiler"
 #. Resource IDs: (153)
 msgid "Invalid path!"
 msgstr "Ogiltig mapp!"
+
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr "Ogiltig söktext"
 
 #. Resource IDs: (161)
 msgid "Inverse search"
@@ -396,7 +400,7 @@ msgstr "Förval"
 
 #. Resource IDs: (1065)
 msgid "Press F1 for help"
-msgstr "Tryck in F1 för hjälp"
+msgstr "Tryck på F1 för hjälp"
 
 #. Resource IDs: (154)
 msgid "Programs"
@@ -470,13 +474,21 @@ msgstr "Sök i"
 msgid "Search in found files"
 msgstr "Sök i hittade filer"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr "Ersätt i hittade filer"
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Sökresultat"
 
 #. Resource IDs: (105)
 msgid "Search string"
-msgstr "Sök sträng"
+msgstr "Söksträng"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr "Söksträngen innehåller tecken som inte ingår i ord, så det går inte att söka efter \"hela ord\"!"
 
 #. Resource IDs: (128)
 #, c-format
@@ -552,7 +564,7 @@ msgstr "\\"
 
 #. Resource IDs: (116)
 msgid "a regular expression used for searching. Press F1 for more info."
-msgstr "ett reguljärt uttryck använt för sökning. Tryck F1 för mer information."
+msgstr "ett reguljärt uttryck som används för sökning. Tryck på F1 för mer information."
 
 #. Resource IDs: (125)
 msgid "an empty string"
@@ -593,7 +605,7 @@ msgstr "grepWin inställningar"
 
 #. Resource IDs: (157)
 msgid "hold down the shift key to find files that DO NOT contain the search string"
-msgstr "håll ner shift-tangenten för att hitta filer som inte innehåller söksträngen"
+msgstr "håll ner skifttangenten för att hitta filer som inte innehåller söksträngen"
 
 #. Resource IDs: (165)
 msgid "include file paths"

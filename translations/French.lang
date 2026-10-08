@@ -40,7 +40,7 @@ msgstr "%ld autres correspondances"
 
 #. Resource IDs: (1069)
 msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %column% with in line offset, %pattern% with the search pattern"
-msgstr "%path% est remplacé par le chemin d'accès du fichier, %line% par la ligne vers laquelle effectuer le saut, et %column% par le décalage dans la ligne, %pattern% par le motif de recherche"
+msgstr "%path% est remplacé par le chemin du fichier, %line% par la ligne de destination, %column% par le décalage dans la ligne, %pattern% par le motif de recherche"
 
 #. Resource IDs: (175)
 #, c-format
@@ -297,6 +297,10 @@ msgstr "Inclure éléments système"
 msgid "Invalid path!"
 msgstr "Chemin invalide !"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr "Texte de recherche invalide"
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Recherche inverse"
@@ -470,6 +474,10 @@ msgstr "Chercher dans :"
 msgid "Search in found files"
 msgstr "Chercher dans les fichiers trouvés"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Résultats de la recherche"
@@ -477,6 +485,10 @@ msgstr "Résultats de la recherche"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Chaîne de recherche"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr "La chaîne de recherche contient des caractères non alphanumériques, une recherche de \"mot entier\" n'est pas possible !"
 
 #. Resource IDs: (128)
 #, c-format

@@ -297,6 +297,10 @@ msgstr "包含系統項目"
 msgid "Invalid path!"
 msgstr "無效路徑！"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "反向搜尋"
@@ -470,6 +474,10 @@ msgstr "搜尋於"
 msgid "Search in found files"
 msgstr "在找到的檔案中搜尋"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr "在找到的檔案中取代"
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "搜尋結果"
@@ -477,6 +485,10 @@ msgstr "搜尋結果"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "搜尋字串"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr ""
 
 #. Resource IDs: (128)
 #, c-format

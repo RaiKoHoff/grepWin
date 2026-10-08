@@ -40,7 +40,7 @@ msgstr "%ld további találat"
 
 #. Resource IDs: (1069)
 msgid "%path% is replaced with the path of the file, %line% with the line to jump to, %column% with in line offset, %pattern% with the search pattern"
-msgstr "%path% helyébe a fájl elérési útvonala, %line% helyébe az a sor lép, amelyre ugrani kell, %pattern% a keresési mintával"
+msgstr "%path% helyébe a fájl elérési útvonala kerül, %line% helyébe az a sor lép, amelyre ugrani kell, %column% a soron belüli eltolás, %pattern% a keresési mintával"
 
 #. Resource IDs: (175)
 #, c-format
@@ -297,6 +297,10 @@ msgstr "Rendszerelemek is"
 msgid "Invalid path!"
 msgstr "Érvénytelen útvonal!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr "Érvénytelen keresési szöveg"
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Fordított keresés"
@@ -470,6 +474,10 @@ msgstr "Keresés ebben"
 msgid "Search in found files"
 msgstr "Keresés a talált fájlokban"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Keresési eredmények"
@@ -477,6 +485,10 @@ msgstr "Keresési eredmények"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Keresett szöveg"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr "A keresett szöveg nem egy szót tartalmaz, a \"teljes szó\" keresés nem lehetséges!"
 
 #. Resource IDs: (128)
 #, c-format

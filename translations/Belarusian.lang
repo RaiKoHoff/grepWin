@@ -297,6 +297,10 @@ msgstr "Уключыць сістэмныя"
 msgid "Invalid path!"
 msgstr "Памылковы шлях!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Зваротны пошук"
@@ -470,6 +474,10 @@ msgstr "Шукаць у"
 msgid "Search in found files"
 msgstr "Шукаць у знойдзеных файлах"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Вынікі пошуку"
@@ -477,6 +485,10 @@ msgstr "Вынікі пошуку"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Пошук радка"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr ""
 
 #. Resource IDs: (128)
 #, c-format

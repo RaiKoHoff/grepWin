@@ -297,6 +297,10 @@ msgstr "Inclusief systeembestanden"
 msgid "Invalid path!"
 msgstr "Ongeldig pad!"
 
+#. Resource IDs: (183)
+msgid "Invalid search text"
+msgstr ""
+
 #. Resource IDs: (161)
 msgid "Inverse search"
 msgstr "Omgekeerde zoekrichting"
@@ -470,6 +474,10 @@ msgstr "Zoeken in"
 msgid "Search in found files"
 msgstr "Zoek in gevonden bestanden"
 
+#. Resource IDs: (184)
+msgid "Replace in found files"
+msgstr ""
+
 #. Resource IDs: (1018)
 msgid "Search results"
 msgstr "Zoekresultaat"
@@ -477,6 +485,10 @@ msgstr "Zoekresultaat"
 #. Resource IDs: (105)
 msgid "Search string"
 msgstr "Tekenreeks"
+
+#. Resource IDs: (182)
+msgid "Search string contains non-word characters, a \"whole word\" search is not possible!"
+msgstr ""
 
 #. Resource IDs: (128)
 #, c-format
